@@ -1,5 +1,6 @@
 # bot.py
 from Team import Team
+import threading
 import os
 import random
 from PlayerDB import PlayerDB
@@ -27,6 +28,22 @@ games = {REG_NA: None, REG_EU: None}
 REGIONS = [k for k, _ in queues.items()]
 playerDB = PlayerDB()
 
+async def StartTeamPick(ctx, region):
+    queue = queues[region]
+    await ctx.send(f'Picking teams on {region}, players={IdsToNames(queue)}')
+    game = games[region] = Game(region, queue)
+    queue = queues[region].clear()
+
+    await ctx.send(f'Zerg Captain: {IdToName(game.zergCapt)}, Terran Captain: {IdToName(game.terranCapt)}')
+
+    threading.Timer(60, PickTimeout, [ctx, game]).start()
+
+def IdToName(id):
+    return bot.get_user(id).name
+
+def IdsToNames(ids):
+    return [IdToName(id) for id in ids]
+
 #mutex = Lock()
 
 @bot.event
@@ -36,16 +53,19 @@ async def on_ready():
 @bot.command(name='add', help='Add to queue (NA/EU/ALL)')
 async def on_add(ctx, region='ALL'):
     player = ctx.message.author.name
-    player_id = ctx.message.author.id
+    playerId = ctx.message.author.id
+    if not await CheckIsRegisterd(ctx):
+        return
+
     if region == REG_ALL:
         for reg in REGIONS:
             #if player not in queues[reg]:
             await on_add(ctx, reg)
         return
                 
-    if region in queues:
-        if player not in queues[region]:
-            queues[region].append(player_id)
+    if region in REGIONS:
+        if True: #playerId not in queues[region]:
+            queues[region].append(playerId)
             #mutex.acquire()
             #try:
             #finally:
@@ -54,7 +74,7 @@ async def on_add(ctx, region='ALL'):
             await ctx.send(f'{player} added to {region} {len(queues[region])}/{Game.N_PLAYERS}')
 
             if len(queues[region]) == Game.N_PLAYERS:
-                StartTeamPick(ctx, region)
+                await StartTeamPick(ctx, region)
         else:
             await ctx.send(f'{player} already added to {region}')
     else:
@@ -95,6 +115,9 @@ async def on_pick(ctx, mention):
     pickedId = pickedIds[0].id
     pickedPlayer = pickedIds[0].name
 
+    if not await CheckIsRegisterd(ctx):
+        return
+
     if len(pickedIds) != 1:
         await ctx.send(f'Must pick only 1 player')
         return
@@ -102,10 +125,6 @@ async def on_pick(ctx, mention):
     region = RegFromPlayer(choosingId)
     if region == None:
         await ctx.send(f'Must be a captain in order to pick')
-        return
-
-    if game.state == State.IN_GAME:
-        await ctx.send(f'Game already running')
         return
 
     if choosingId == pickedId:
@@ -116,6 +135,11 @@ async def on_pick(ctx, mention):
     if game.playerTurn != choosingId:
         await ctx.send(f'Not your turn to pick')
         return
+
+    if game.state == State.IN_GAME:
+        await ctx.send(f'Game already running')
+        return
+
 
     game.PickPlayer(pickedId)
 
@@ -157,6 +181,8 @@ async def on_unregister(ctx, mention):
 async def on_stats(ctx, mention):
     trigPlayer = ctx.message.author.id
     players = ctx.message.mentions
+    if not await CheckIsRegisterd(ctx):
+        return
 
     for player in players:
         playerName = player.name
@@ -171,13 +197,16 @@ async def on_stats(ctx, mention):
 
 @bot.command(name='status', help='Query status of queue and any running games')
 async def on_status(ctx):
+    if not await CheckIsRegisterd(ctx):
+        return
+
     for region, queue in queues.items():
         embed = discord.Embed(title="Status", description=f"Status of running/queued games on {region}")
         queued = [bot.get_user(id).name for id in queue]
         embed.add_field(name="Queued", value=f"{len(queue)}/{Game.N_PLAYERS}\n Players: {queued}")
         if games[region] != None:
-            zerg = games[region].ZergPlayers()
-            terran = games[region].TerranPlayers()
+            zerg = IdsToNames(games[region].zerg)
+            terran = IdsToNames(games[region].terran)
             embed.add_field(name="Running", value=f"Zerg: {zerg}\n Terran: {terran}")
         await ctx.channel.send(content=None, embed=embed)
 
@@ -190,12 +219,19 @@ def RegFromPlayer(player):
 
     return None
 
-async def StartTeamPick(ctx, region):
-    await ctx.send(f'Picking teams on {region}, players={queues[region]}')
-    game = games[region] = Game(region, queues[region])
-    queues = queues[region].clear()
+async def PickTimeout(ctx, game):
+    await ctx.send(f'{bot.get_user(game.playerTurn).name} took too long...')
+    pickedPlayer = game.PickAfk()
+    await ctx.send(f'{pickedPlayer} added to {game.CaptRace()}')
+    threading.Timer(60, PickTimeout, [ctx, game]).start()
 
-    await ctx.send(f'Zerg Captain: {game.zergCapt}, Terran Captain: {game.terranCapt}')
+
+async def CheckIsRegisterd(ctx):
+    if not playerDB.IsRegistered(ctx.message.author.id):
+        await ctx.send(f'Must be registered to execute this command')
+        return False
+    
+    return True
 
 async def ReportMatchResult(ctx, res):
     playerId = ctx.message.author.id

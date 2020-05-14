@@ -37,6 +37,3 @@ class PlayerDB:
         
     def Close(self):
         self.conn.close()
-
-        
-    

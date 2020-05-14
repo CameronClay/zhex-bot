@@ -8,7 +8,7 @@ class State(Enum):
     IN_GAME = 2
 
 class Game:
-    N_PLAYERS = 8
+    N_PLAYERS = 3
     TERRAN_PICK = 2
     ZERG_PICK = 1
 
@@ -71,11 +71,6 @@ class Game:
         else:
             raise AssertionError(f"{player} must be a captain")
 
-    def ZergPlayers(self, bot):
-        return [bot.get_user(id).name for id in self.zerg.players]
-
-    def TerranPlayers(self, bot):
-        return [bot.get_user(id).name for id in self.terran.players]
 
     def MatchResult(self, captain, res):
         if captain == self.zergCapt:
@@ -86,3 +81,8 @@ class Game:
             self.terran.MatchResult(res)
         else:
             raise AssertionError(f"{captain} must be a captain")
+
+    def PickAfk(self):
+        pickedPlayer = self.playerPool[-1]
+        self.PickPlayer(pickedPlayer)
+        return pickedPlayer
