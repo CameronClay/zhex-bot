@@ -129,3 +129,4 @@ dmypy.json
 .pyre/
 Max.txt
 Min.txt
+/players

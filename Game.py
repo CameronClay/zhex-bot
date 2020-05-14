@@ -8,10 +8,13 @@ class State(Enum):
     IN_GAME = 2
 
 class Game:
+    N_PLAYERS = 8
     TERRAN_PICK = 2
     ZERG_PICK = 1
 
     def __init__(self, region, playerPool):
+        assert len(playerPool) == Game.N_PLAYERS
+
         self.region = region
         self.state = State.ZERG_PICK
         self.playerPool = deepcopy(playerPool)
@@ -19,6 +22,7 @@ class Game:
         self.terranCapt = self.ChooseCaptain()
         self.zerg = Team(self.zergCapt)
         self.terran = Team(self.terranCapt)
+        self.playerTurn = self.zergCapt
         self.pickedCnt = 0
 
     def ChooseCaptain(self):
@@ -49,8 +53,10 @@ class Game:
     def ChangeTurn(self):
         if (self.pickedCnt == State.TERRAN_PICK) and (self.state == State.TERRAN_PICK):
             self.state = State.ZERG_PICK
+            self.playerTurn = self.zergCapt
         else:
             self.state = State.TERRAN_PICK
+            self.playerTurn = self.terranCapt
 
         self.pickedCnt += 1
 
@@ -64,3 +70,19 @@ class Game:
             return "Terran"
         else:
             raise AssertionError(f"{player} must be a captain")
+
+    def ZergPlayers(self, bot):
+        return [bot.get_user(id).name for id in self.zerg.players]
+
+    def TerranPlayers(self, bot):
+        return [bot.get_user(id).name for id in self.terran.players]
+
+    def MatchResult(self, captain, res):
+        if captain == self.zergCapt:
+            self.zerg.MatchResult(res)
+            self.terran.MatchResult(not res)
+        elif captain == self.terranCapt:
+            self.zerg.MatchResult(not res)
+            self.terran.MatchResult(res)
+        else:
+            raise AssertionError(f"{captain} must be a captain")

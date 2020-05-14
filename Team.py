@@ -1,5 +1,5 @@
 from statistics import mean
-from Player import Player
+from Player import Player, MatchRes
 
 class Team:
     def __init__(self, captain):
@@ -14,7 +14,7 @@ class Team:
     def Ea(self, TeamOther):
         return 1/(1 + pow(10, (self.Elo - TeamOther.Elo)/ 400))
     
-    def MatchResult(self, ea, res):
+    def MatchResult(self, res):
         for player in self.players:
             player.MatchResult(self.Ea, res)
     
