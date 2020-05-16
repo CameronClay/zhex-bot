@@ -82,12 +82,16 @@ async def StartPickTimer(ctx, game):
     else:
         await PickShow(ctx, game)
 
+def IdToUser(id):
+    return bot.get_user(id)
+
 def IdToName(id):
-    found = discord.utils.find(lambda player: player.id == id, bot.users)
-    if found == None:
+    res = bot.get_user(id)
+    if res == None:
         return str(id)
 
-    return bot.get_user(id).name
+    return res.name
+    #return bot.get_user(id).name
 
 def IdsToNames(ids):
     return [IdToName(id) for id in ids]
@@ -110,19 +114,14 @@ async def on_add(ctx, region='ALL'):
 
     if region == REG_ALL:
         for reg in REGIONS:
-            #if player not in queues[reg]:
+            #if player not in queues[reg].Ids:
             if not any((games[newReg] != None and games[newReg].IsPlaying(playerId) for newReg in REGIONS)): #necessary if a player causes a game to start and queued on both regions
                 await on_add(ctx, reg)
         return
                 
     if region in REGIONS:
-        if True: #playerId not in queues[region]:
+        if True: #playerId not in queues[region].Ids:
             queues[region].add(playerId)
-            #mutex.acquire()
-            #try:
-            #finally:
-            #    mutex.release()
-            #print(f'error!')
             await ctx.send(f'{player} added to {region} {len(queues[region])}/{Game.N_PLAYERS}')
 
             if len(queues[region]) == Game.N_PLAYERS:
@@ -260,9 +259,9 @@ async def on_stats(ctx, name):
         embed = discord.Embed(title=f"Stats {playerName}")
         for region in REGIONS:
             usPlayer = playerDB.Find(player.id, region)
-            if usPlayer:
+            if usPlayer and usPlayer.lastPlayed:
                 embed.add_field(name=region, value=f"Games: {usPlayer.games}\t Wins: {usPlayer.wins}\t Loses: {usPlayer.loses}\t \
-                    Elo: {int(usPlayer.elo)}, Last played: {usPlayer.lastPlayed}")
+                    Elo: {int(usPlayer.elo)}, Last played: {usPlayer.lastPlayed} UTC")
         await ctx.channel.send(content=None, embed=embed)
 
 @bot.command(name='status', help='Query status of queue and any running games')
@@ -273,7 +272,7 @@ async def on_status(ctx):
 
     for region, queue in queues.items():
         queued = IdsToNames(queue)
-        embed = discord.Embed(title=f"Status of running/queued games on {region}", description=f"{len(queue)}/{Game.N_PLAYERS}\n Players: {queued}")
+        embed = discord.Embed(title=f"Status of {region}", description=f"Queued {len(queue)}/{Game.N_PLAYERS}\n Players: {queued}")
         if games[region] != None:
             zerg = IdsToNames(games[region].zerg.Ids)
             terran = IdsToNames(games[region].terran.Ids)
@@ -281,6 +280,7 @@ async def on_status(ctx):
         await ctx.channel.send(content=None, embed=embed)
 
 @bot.command(name='setelo', help='Test command')
+@commands.has_role('MOD')
 async def set_elo(ctx, mentions, region, elo : float):
     players = ctx.message.mentions
 
@@ -339,8 +339,8 @@ async def ReportMatchResult(ctx, res):
     newTElo = [(IdToName(player.id), int(player.elo)) for player in game.terran.players]
 
     embed = discord.Embed(title=f"Match Concluded on {game.region}", description=f"Victor: {game.GetVictor(playerId, res)}")
-    embed.add_field(name="Prior Elo's", value=f"Zerg: {oldZElo}\n Terran: {oldTElo}")
-    embed.add_field(name="Updated Elo's", value=f"Zerg: {newZElo}\n Terran: {newTElo}")
+    embed.add_field(name="Prior elo's", value=f"Zerg: {oldZElo}\n Terran: {oldTElo}")
+    embed.add_field(name="Updated elo's", value=f"Zerg: {newZElo}\n Terran: {newTElo}")
     await ctx.channel.send(content=None, embed=embed)
 
     games[region] = None
@@ -351,6 +351,19 @@ async def StartGame(ctx, game):
     terran = IdsToNames(game.terran.Ids)
     embed.add_field(name="Teams", value=f"Zerg: {zerg}\n Terran: {terran}")
     await ctx.channel.send(content=None, embed=embed)
+
+    await MoveToVoice(ctx, game)
+
+async def MoveToVoice(ctx, game):
+    zChannel = f"{game.region} Zerg"
+    tChannel = f"{game.region} Terran"
+    for channel in [zChannel, tChannel]:
+        found = discord.utils.find(lambda player: player.id == id, guild.channels)
+    await guild.create_voice_channel(zChannel)
+    for id in game.zerg.Ids:
+        user = IdToUser(id)
+        if user:
+            user.move_to(zChannel)
 
 if __name__ == "__main__":
     stubIds = [i for i in range(1, 2 + 1)]

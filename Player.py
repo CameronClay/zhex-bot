@@ -1,5 +1,7 @@
 from enum import IntEnum
-from datetime import date
+from datetime import datetime
+import time
+
 class MatchRes(IntEnum):
     WIN = 1,
     LOSS = 0,
@@ -20,10 +22,16 @@ class Player:
     def Ratio(self):
         return float(self.wins) / self.loses
 
+    @staticmethod
+    def __utc2local (utc):
+        epoch = time.mktime(utc.timetuple())
+        offset = datetime.fromtimestamp (epoch) - datetime.utcfromtimestamp (epoch)
+        return utc + offset
+
     def MatchResult(self, ea, res : MatchRes):
         k = 25 if self.games < 30 else 15
         self.elo = max(self.elo + k * (int(res) - ea), 0)
-        self.lastPlayed = date.today()
+        self.lastPlayed = datetime.utcnow().strftime("%b %d %Y %H:%M:%S")
 
         if res == MatchRes.WIN:
             self.wins += 1
