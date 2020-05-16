@@ -2,21 +2,25 @@ from statistics import mean
 from Player import Player, MatchRes
 
 class Team:
+    DIFF_PER_TEN = 400 #PLAYER A is 10 times more likely to win for every difference of 400 points
     def __init__(self, captain):
-        self.players = [captain]
+        self.players = {captain}
         self.captain = captain
     
     @property
     def Elo(self):
-        return mean(self.players)
+        return mean((player.elo for player in self.players))
 
-    @property
-    def Ea(self, TeamOther):
-        return 1/(1 + pow(10, (self.Elo - TeamOther.Elo)/ 400))
+    def Ea(self, teamOther):
+        return 1/(1 + pow(10, (teamOther.Elo - self.Elo) / Team.DIFF_PER_TEN))
     
-    def MatchResult(self, res):
+    def MatchResult(self, teamOther, res):
         for player in self.players:
-            player.MatchResult(self.Ea, res)
+            player.MatchResult(self.Ea(teamOther), res)
     
     def Add(self, player):
-        self.players.append(player)
+        self.players.add(player)
+
+    @property
+    def Ids(self):
+        return [player.id for player in self.players]

@@ -1,27 +1,33 @@
-from enum import Enum
+from enum import IntEnum
 from datetime import date
-class MatchRes(Enum):
+class MatchRes(IntEnum):
     WIN = 1,
-    LOSS = 0
+    LOSS = 0,
+    TIE = 2
 
 class Player:
     AMOUNT = 50
-    def __init__(self, id):
+    def __init__(self, id, region, wins = 0, loses = 0, games = 0, elo = 1500, lastPlayed = None):
         self.id = id
-        self.wins = 0
-        self.loses = 0
-        self.elo = 1500
-        self.lastPlayed = None
-
-    @property 
-    def Games(self):
-        return self.wins + self.loses
+        self.region = region
+        self.wins = wins
+        self.loses = loses
+        self.games = games
+        self.elo = elo
+        self.lastPlayed = lastPlayed
 
     @property
     def Ratio(self):
         return float(self.wins) / self.loses
 
-    def MatchResult(self, ea, res):
-        k = 25 if self.Games < 30 else 15
-        self.elo = self.elo + k * (res - ea)
+    def MatchResult(self, ea, res : MatchRes):
+        k = 25 if self.games < 30 else 15
+        self.elo = max(self.elo + k * (int(res) - ea), 0)
         self.lastPlayed = date.today()
+
+        if res == MatchRes.WIN:
+            self.wins += 1
+        elif res == MatchRes.LOSS:
+            self.loses += 1
+
+        self.games += 1
