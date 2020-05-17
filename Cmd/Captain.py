@@ -10,7 +10,7 @@ class Captain(commands.Cog):
     def __init__(self, model):
         self.model = model
 
-    @commands.command(name='pick', help='Pick member to be on your team')
+    @commands.command(name='pick', help='Pick member to be on your team', ignore_extra=False)
     @commands.cooldown(2, 10)
     async def on_pick(self, ctx, member : discord.Member):
         if not self.model.ChkIsReg(ctx):
@@ -48,7 +48,7 @@ class Captain(commands.Cog):
         await self.model.PickShow(ctx, game)
         await self.model.SetPickTimer(ctx, game)
 
-    @commands.command(name='sub', help='Sub member due to AFK')
+    @commands.command(name='sub', help='Sub member due to AFK', ignore_extra=False)
     @commands.cooldown(2, 10)
     async def on_sub(self, ctx, memSub : discord.Member, memSubWith : discord.Member):
         if not self.model.ChkIsReg(ctx):
@@ -79,8 +79,6 @@ class Captain(commands.Cog):
         if memSub.id not in game.PoolIds():
             await ctx.send(f"{memSub.name} not currently playing")
             return
-
-        #game.PickPlayer(pickedId)
 
         pSubWith = self.model.playerDB.Find(memSubWith.id, region)
         game.Sub(memSub.id, memSub.id)

@@ -116,7 +116,11 @@ class Game:
         return victor
 
     def MatchResult(self, captainId, res):
-        notRes = MatchRes.LOSS if res == MatchRes.WIN else MatchRes.WIN
+        notRes = MatchRes.TIE
+        if res == MatchRes.WIN:
+            res = MatchRes.LOSS
+        elif res == MatchRes.LOSS:
+            res = MatchRes.WIN
 
         if captainId == self.zergCapt.id:
             self.zerg.MatchResult(self.terran, res)

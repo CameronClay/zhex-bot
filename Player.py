@@ -39,5 +39,5 @@ class Player:
             self.loses += 1
 
         self.games += 1
-        self.lastPlayed = datetime.utcnow().strftime("%b %d %Y %H:%M:%S")
+        self.lastPlayed = datetime.utcnow().strftime("%m\%d\%Y %H:%M")
 

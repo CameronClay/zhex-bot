@@ -67,8 +67,14 @@ class Model(commands.Cog):
 
     @commands.Cog.listener()
     async def on_command_error(self, ctx, error):
-        if isinstance(error, commands.errors.CheckFailure):
-            await ctx.send('You do not have the correct role for this command')
+        #if isinstance(error, commands.errors.CheckFailure):
+        #    await ctx.send(f'You do not have the correct role for this command')
+        if isinstance(error, commands.errors.UserInputError) \
+        or isinstance(error, commands.errors.ConversionError):
+            syntax = f"Syntax: {ctx.prefix}{ctx.command.name} {ctx.command.signature}"
+            await ctx.send(syntax)
+        #elif isinstance(error, commands.errors.CommandNotFound):
+        #    await ctx.send(f'Invalid command: "{ctx.invoked_with}"')
 
 
     def ChkIsReg(self, ctx):
@@ -99,7 +105,7 @@ class Model(commands.Cog):
         return [self.IdToName(id) for id in ids]
 
     async def StartGame(self, ctx, game):
-        embed = discord.Embed(title=f"Game Starting on {game.region}", description=f"Start a prepicked lobby and arrange teams, captains report back the result of the game with rw/rl/rt")
+        embed = discord.Embed(title=f"Game Starting on {game.region}", description=f"Start a prepicked lobby and arrange teams, one captain report back the result of the game with rw/rl/rt")
         zerg = self.IdsToNames(game.zerg.Ids)
         terran = self.IdsToNames(game.terran.Ids)
         embed.add_field(name="Teams", value=f"Zerg: {zerg}\nTerran: {terran}")

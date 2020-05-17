@@ -7,6 +7,7 @@ from datetime import datetime
 from Game import Game, State
 from Player import Player, MatchRes
 import Region
+from Utility import CodeB
 
 class General(commands.Cog):     
     def __init__(self, model):
@@ -77,7 +78,7 @@ class General(commands.Cog):
         self.model.queues.remove_all(Region.ALL, playerId)
         await ctx.send(f'{playerName} removed from all queues!')
         
-    @commands.command(name='stats', help='Retreive stats of player')
+    @commands.command(name='stats', help='Retreive stats of player', ignore_extra=False)
     @commands.cooldown(2, 10)
     async def on_stats(self, ctx, member : discord.Member):
         if not self.model.ChkIsReg(ctx):
@@ -85,12 +86,22 @@ class General(commands.Cog):
 
         playerName = member.name
 
-        embed = discord.Embed(title=f"Stats {playerName}")
+        embed = discord.Embed(title=f"Stats {playerName}", colour = discord.Colour.blue())
         for region in Region.REGIONS:
             usPlayer = self.model.playerDB.Find(member.id, region)
             if usPlayer and usPlayer.lastPlayed:
-                embed.add_field(name=region, value=f"Win %: {usPlayer.Ratio * 100 :.1f}%, Elo: {int(usPlayer.elo)}, Games: {usPlayer.games}, \
-                Wins: {usPlayer.wins}, Loses: {usPlayer.loses}, Last played: {usPlayer.lastPlayed} UTC")
+                ties = usPlayer.games - usPlayer.wins - usPlayer.loses
+                elo = f'{int(usPlayer.elo)}'.ljust(4)
+                winPer = f'{usPlayer.Ratio*100:.1f}'.ljust(5)
+
+                msg = f'''Win %\tElo\tLast Played
+{winPer}\t{elo}   {usPlayer.lastPlayed}
+
+Win/Loss/Tie
+{usPlayer.wins}/{usPlayer.loses}/{ties}
+'''
+
+                embed.add_field(name=region, value=CodeB(msg, "ml"), inline = False)
         await ctx.channel.send(content=None, embed=embed)
 
     @commands.command(name='status', help='Query status of queue and any running games')
