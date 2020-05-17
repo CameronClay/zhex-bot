@@ -68,7 +68,7 @@ class Game:
 
     def __Start(self):
         self.state = State.IN_GAME
-        self.timeStarted = datetime.now(timezone.utc)
+        self.timeStarted = datetime.now()
 
     def PickPlayer(self, playerId):
         assert self.state != State.IN_GAME, "Cannot pick player while playing"
@@ -141,4 +141,4 @@ class Game:
       return self.playerPool.keys()
 
     def RunningDuration(self):
-        return datetime.now(timezone.utc) - self.timeStarted
+        return datetime.now() - self.timeStarted

@@ -2,6 +2,7 @@ from discord.ext import commands
 from Model import Model
 import itertools
 import discord
+from datetime import datetime
 
 from Game import Game, State
 from Player import Player, MatchRes
@@ -17,17 +18,22 @@ class General(commands.Cog):
         playerId = ctx.message.author.id
         playerName = ctx.message.author.name
 
-        if self.model.playerDB.IsRegistered(playerId):
+        registeredRegs = []
+        for reg in Region.REGIONS:
+            res = self.model.playerDB.IsRegistered(playerId, reg)
+            if not res:
+                self.model.playerDB.Register(Player(playerId, reg))
+                registeredRegs.append(reg)
+
+        if len(registeredRegs) == 0:
             await ctx.send(f'{playerName} already registered')
             return
-
-        for reg in Region.REGIONS:
-            self.model.playerDB.Register(Player(playerId, reg))
-        await ctx.send(f'{playerName} successfully registered')
+        else:
+            await ctx.send(f'{playerName} successfully registered on {registeredRegs}')
 
     @commands.command(name='add', help='Add to queue on region (NA/EU/ALL = default)')
     @commands.cooldown(2, 10)
-    async def on_add(self, ctx, region='ALL'):
+    async def on_add(self, ctx, region : str ='ALL'):
         if not self.model.ChkIsReg(ctx):
             return
 
@@ -100,6 +106,6 @@ class General(commands.Cog):
                 game = self.model.games[region]
                 zerg = self.model.IdsToNames(game.zerg.Ids)
                 terran = self.model.IdsToNames(game.terran.Ids)
-                runningDuration = int(game.RunningDuration().seconds/60)
-                embed.add_field(name=f"Running for {runningDuration} minutes", value=f"Zerg: {zerg}\nTerran: {terran}")
+                runningDuration = int(game.RunningDuration().total_seconds() / 60)
+                embed.add_field(name=f"Running for {runningDuration} min", value=f"Zerg: {zerg}\nTerran: {terran}")
             await ctx.channel.send(content=None, embed=embed)

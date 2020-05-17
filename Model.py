@@ -1,5 +1,6 @@
 import Region
 import itertools
+from datetime import datetime
 
 import discord
 from discord.ext import commands, tasks
@@ -11,7 +12,8 @@ from Player import Player, MatchRes
 from PQueue import PQueue
 
 class Model(commands.Cog):  
-    TIME_TO_PICK = 5
+    TIME_TO_PICK = 5 #in seconds
+    QUEUE_TIMEOUT = 60 # in minutes
     PRIV_CHAN_ID = 710245665896398899
     PRIV_CAT_ID = 711399900008415232
 
@@ -50,6 +52,9 @@ class Model(commands.Cog):
         self.guild = discord.utils.get(self.bot.guilds, name=self.GUILD)
         self.privChannel = self.bot.get_channel(Model.PRIV_CHAN_ID)
         self.category = discord.utils.get(self.guild.categories, id=Model.PRIV_CAT_ID)
+
+        self.PickTimeoutNA.start()
+
         print(f'{self.bot.user.name} is connected to {self.guild.name} (id: {self.guild.id})\n')   
 
     @commands.Cog.listener()
@@ -70,7 +75,7 @@ class Model(commands.Cog):
         return self.ChkIsRegId(ctx.message.author.id)
 
     def ChkIsRegId(self, id):
-        return self.playerDB.IsRegistered(id)
+        return self.playerDB.IsRegistered(id, Region.ALL)
 
     def RegFromPlayer(self, playerId):
         for reg, game in self.games.items():
@@ -187,13 +192,18 @@ class Model(commands.Cog):
         await ctx.channel.send(content=None, embed=embed)
 
         await self.DeleteVoice(game)
+        self.games[region] =  None
 
     def CreateStubs(self, region, nStubs):
-        stubIds = [i for i in range(1, nStubs + 1)]
-        for id in stubIds:
-            if not self.playerDB.IsRegistered(id):
-                self.playerDB.Register(Player(id, region))
-            self.queues.add(region, id)
+        if region == Region.ALL:
+            for reg in Region.REGIONS:
+                self.CreateStubs(reg, nStubs)
+        else:
+            stubIds = [i for i in range(1, nStubs + 1)]
+            for id in stubIds:
+                if not self.playerDB.IsRegistered(id, region):
+                    self.playerDB.Register(Player(id, region))
+                self.queues.add(region, id)
 
     async def CreateVoice(self, game):
         zergCaptName = self.IdToName(game.zergCapt.id)
@@ -234,6 +244,16 @@ class Model(commands.Cog):
         for channel in self.privVChannels[game.region]:
             await channel.delete()
 
+    @tasks.loop(seconds=60)
+    async def PickTimeoutNA(self):
+        for reg, queue in self.queues:
+            for id, timeQueued in queue.copy().items():
+                timeDelta = (datetime.now() - timeQueued).total_seconds() / 60.0
+                if timeDelta > Model.QUEUE_TIMEOUT:
+                    self.queues.remove(reg, id)
+                    playerName = self.IdToName(id)
+                    await self.privChannel.send(f"{playerName} was queued over {Model.QUEUE_TIMEOUT:.1f} minutes and was automatically removed from queues")
+
     #async def MoveUsers(self, ids, channel):
     #    for id in ids:
     #        user = self.IdToUser(id)
@@ -269,11 +289,6 @@ class Model(commands.Cog):
     #    await self.bot.send(f'{self.IdToName(pickedPlayer.id)} added to {game.PlayerRace(pickedPlayer.id)}')
     #    await self.StartPickTimer(ctx, game)
 
-    #@tasks.loop(seconds=10)
-    #async def PickTimeoutNA(self):
-    #    game = self.games[Region.NA]
-    #    await self.PickTimerHelper(game)
-#
     #@tasks.loop(seconds=10)
     #async def PickTimeoutEU(self):
     #    game = self.games[Region.EU]
