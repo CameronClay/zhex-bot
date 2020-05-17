@@ -8,6 +8,8 @@ from PlayerDB import PlayerDB
 from Game import Game, State
 from Player import Player, MatchRes
 
+from PQueue import PQueue
+
 class Model(commands.Cog):  
     TIME_TO_PICK = 5
     PRIV_CHAN_ID = 710245665896398899
@@ -18,8 +20,10 @@ class Model(commands.Cog):
         self.GUILD = GUILD
         self.guild = None
 
-        self.queues = {Region.NA: set(), Region.EU: set()}
-        self.games = {Region.NA: None, Region.EU: None}
+        #self.queues = {Region.NA: set(), Region.EU: set()}
+        #self.queues = {reg:set() for reg in Region.REGIONS}
+        self.queues = PQueue()
+        self.games = {reg:None for reg in Region.REGIONS}
 
         self.playerDB = PlayerDB()
         self.category = None
@@ -93,14 +97,14 @@ class Model(commands.Cog):
         embed = discord.Embed(title=f"Game Starting on {game.region}", description=f"Start a prepicked lobby and arrange teams, captains report back the result of the game with rw/rl/rt")
         zerg = self.IdsToNames(game.zerg.Ids)
         terran = self.IdsToNames(game.terran.Ids)
-        embed.add_field(name="Teams", value=f"Zerg: {zerg}\n Terran: {terran}")
+        embed.add_field(name="Teams", value=f"Zerg: {zerg}\nTerran: {terran}")
         await ctx.channel.send(content=None, embed=embed)
         await self.CreateVoice(game)
 
     async def StartTeamPick(self, ctx, region):
         queue = self.queues[region]
-        game = self.games[region] = Game(region, {self.playerDB.Find(id, region) for id in queue})
-        queue = self.queues[region].clear()
+        game = self.games[region] = Game(region, self.queues.to_players(region, self.playerDB))
+        self.queues.clear(region)
 
         await self.ShowTeamPickInfo(ctx, game)
         await self.StartPickTimer(ctx, game)
@@ -170,8 +174,16 @@ class Model(commands.Cog):
         newTElo = [(self.IdToName(player.id), int(player.elo)) for player in game.terran.players]
 
         embed = discord.Embed(title=f"Match Concluded on {game.region}", description=f"Victor: {game.GetVictor(playerId, res)}")
-        embed.add_field(name="Prior elo's", value=f"Zerg: {oldZElo}\n Terran: {oldTElo}")
-        embed.add_field(name="Updated elo's", value=f"Zerg: {newZElo}\n Terran: {newTElo}")
+        #embed.add_field(name="Prior Zerg elo's", value=f"{oldTElo}")
+        #zUpddElos = [(oldElo, newElo) for oldElo, newElo in zip(oldZElo, newZElo)]
+        nameMax = max(len(name) for name, _ in oldZElo)
+        strZUpdElos = '\n'.join([f'{oldElo[0].ljust(nameMax)}: {oldElo[1]} -> {newElo[1]}' for oldElo, newElo in zip(oldZElo, newZElo)])
+        strTUpdElos = '\n'.join([f'{oldElo[0].ljust(nameMax)}: {oldElo[1]} -> {newElo[1]}' for oldElo, newElo in zip(oldTElo, newTElo)])
+        
+        embed.add_field(name="Updated Zerg elo's        ", value=strZUpdElos)
+        embed.add_field(name="Updated Terran elo's      ", value=strTUpdElos)
+        #embed.add_field(name="Prior elo's", value=f"Zerg: {oldZElo}\n Terran: {oldTElo}")
+        #embed.add_field(name="Updated elo's", value=f"Zerg: {newZElo}\n Terran: {newTElo}")
         await ctx.channel.send(content=None, embed=embed)
 
         await self.DeleteVoice(game)
@@ -181,13 +193,7 @@ class Model(commands.Cog):
         for id in stubIds:
             if not self.playerDB.IsRegistered(id):
                 self.playerDB.Register(Player(id, region))
-            self.queues[region].add(id)
-
-    #async def MoveUsers(self, ids, channel):
-    #    for id in ids:
-    #        user = self.IdToUser(id)
-    #        if user:
-    #            user.voice = discord.VoiceState(True, channel = channel)
+            self.queues.add(region, id)
 
     async def CreateVoice(self, game):
         zergCaptName = self.IdToName(game.zergCapt.id)
@@ -228,6 +234,11 @@ class Model(commands.Cog):
         for channel in self.privVChannels[game.region]:
             await channel.delete()
 
+    #async def MoveUsers(self, ids, channel):
+    #    for id in ids:
+    #        user = self.IdToUser(id)
+    #        if user:
+    #            user.voice = discord.VoiceState(True, channel = channel)
 
 #async def MoveToVoice(ctx, game):
 #    zChannel = f"{game.region} Zerg"

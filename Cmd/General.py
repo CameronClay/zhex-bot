@@ -48,7 +48,7 @@ class General(commands.Cog):
                 self.model.games[region].state == State.IN_GAME:
                     await ctx.send(f"{region}'s queue is full")
                     return
-                self.model.queues[region].add(playerId)
+                self.model.queues.add(region, playerId)
                 await ctx.send(f'{player} added to {region} {len(self.model.queues[region])}/{Game.N_PLAYERS}')
 
                 if len(self.model.queues[region]) == Game.N_PLAYERS:
@@ -68,10 +68,7 @@ class General(commands.Cog):
         playerId = ctx.message.author.id
         playerName = ctx.message.author.name
 
-        for _,queue in self.model.queues.items():
-            if playerId in queue:
-                queue.remove(playerId)
-
+        self.model.queues.remove_all(Region.ALL, playerId)
         await ctx.send(f'{playerName} removed from all queues!')
         
     @commands.command(name='stats', help='Retreive stats of player')
@@ -96,13 +93,13 @@ class General(commands.Cog):
         if not self.model.ChkIsReg(ctx):
             return
 
-        for region, queue in self.model.queues.items():
-            queued = self.model.IdsToNames(queue)
+        for region, queue in self.model.queues:
+            queued = self.model.IdsToNames(queue.keys())
             embed = discord.Embed(title=f"Status of {region}", description=f"Queued {len(queue)}/{Game.N_PLAYERS}\n Players: {queued}")
             if self.model.games[region] != None and self.model.games[region].state == State.IN_GAME:
                 game = self.model.games[region]
                 zerg = self.model.IdsToNames(game.zerg.Ids)
                 terran = self.model.IdsToNames(game.terran.Ids)
                 runningDuration = int(game.RunningDuration().seconds/60)
-                embed.add_field(name=f"Running for {runningDuration} minutes", value=f"Zerg: {zerg}\n Terran: {terran}")
+                embed.add_field(name=f"Running for {runningDuration} minutes", value=f"Zerg: {zerg}\nTerran: {terran}")
             await ctx.channel.send(content=None, embed=embed)

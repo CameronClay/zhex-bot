@@ -18,7 +18,7 @@ def IdGen():
     return wrapper
 
 class Game:
-    N_PLAYERS = 8
+    N_PLAYERS = 3
     TERRAN_PICK = 2
     ZERG_PICK = 1
     SIZE_ZERG = 2
@@ -29,13 +29,13 @@ class Game:
 
         self.id = IdGen()
         self.region = region
-        self.state = State.ZERG_PICK
+        self.state = State.TERRAN_PICK
         self.playerPool = {player.id:player for player in playerPool}
         self.zergCapt = self.ChooseCaptain()
         self.terranCapt = self.ChooseCaptain()
         self.zerg = Team(self.zergCapt)
         self.terran = Team(self.terranCapt)
-        self.playerTurn = self.zergCapt
+        self.playerTurn = self.terranCapt
         self.pickedCnt = 0
         self.timeStarted = None
 
