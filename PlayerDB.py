@@ -39,15 +39,6 @@ class PlayerDB:
         self.conn.commit()
 
     def UpdateStats(self, player):
-        #self.conn.execute(
-        #'''update players
-        #   set 
-        #       wins = {player.wins}, 
-        #       loses = {player.loses}, 
-        #       elo = {player.elo}, 
-        #       lastPlayed = {player.lastPlayed}
-        #   where id = {player.id}''')
-
         sql = f'''update players
             set
                 wins = ?, 

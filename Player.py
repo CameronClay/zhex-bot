@@ -20,7 +20,7 @@ class Player:
 
     @property
     def Ratio(self):
-        return float(self.wins) / self.loses
+        return float(self.wins) / (self.wins + self.loses)
 
     @staticmethod
     def __utc2local (utc):
@@ -30,8 +30,8 @@ class Player:
 
     def MatchResult(self, ea, res : MatchRes):
         k = 25 if self.games < 30 else 15
-        self.elo = max(self.elo + k * (int(res) - ea), 0)
-        self.lastPlayed = datetime.utcnow().strftime("%b %d %Y %H:%M:%S")
+        if res != MatchRes.TIE:
+            self.elo = max(self.elo + k * (int(res) - ea), 0)
 
         if res == MatchRes.WIN:
             self.wins += 1
@@ -39,3 +39,5 @@ class Player:
             self.loses += 1
 
         self.games += 1
+        self.lastPlayed = datetime.utcnow().strftime("%b %d %Y %H:%M:%S")
+
