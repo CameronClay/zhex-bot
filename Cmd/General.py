@@ -7,14 +7,16 @@ from datetime import datetime
 from Game import Game, State
 from Player import Player, MatchRes
 import Region
-from Utility import CodeB
+from Utility import CodeB, CodeSB
 
-class General(commands.Cog):     
+class General(commands.Cog):  
+    CMD_RATE = 2
+    CMD_COOLDOWN = 10   
     def __init__(self, model):
         self.model = model
 
     @commands.command(name='reg', help='Register with the server to play private games (registration is required to run all other commands)')
-    @commands.cooldown(2, 10)
+    @commands.cooldown(CMD_RATE, CMD_COOLDOWN)
     async def on_register(self, ctx):
         playerId = ctx.message.author.id
         playerName = ctx.message.author.name
@@ -34,11 +36,11 @@ class General(commands.Cog):
 
     
     async def ShowAddQueueStatus(self, ctx, playerName, regionsAddedTo):
-        embed = discord.Embed(colour = discord.Colour.blue(), description = self.QueueStatus())
-        await ctx.channel.send(content=f'`{playerName} added to: {", ".join(regionsAddedTo)}`', embed=embed)
+        embed = discord.Embed(colour = discord.Colour.blue(), description = self.model.QueueStatus())
+        await ctx.channel.send(content=CodeSB(f'{playerName} added to: {", ".join(regionsAddedTo)}'), embed=embed)
 
-    @commands.command(name='add', help='Add to queue on region (NA/EU/ALL = default)', ignore_extra=False)
-    @commands.cooldown(2, 10)
+    @commands.command(name='add', help=f'Add to queue on region (NA/EU/ALL = default); Timeout={Model.QUEUE_TIMEOUT} mins', ignore_extra=False)
+    @commands.cooldown(CMD_RATE, CMD_COOLDOWN)
     async def on_add(self, ctx, region : str ='ALL'):
         if not self.model.ChkIsReg(ctx):
             return
@@ -76,12 +78,9 @@ class General(commands.Cog):
             return
         
         await self.ShowAddQueueStatus(ctx, player, regionsAddedTo)
-
-    def QueueStatus(self):
-        return " ".join(f'[{reg}] {len(self.model.queues[reg])}/{Game.N_PLAYERS}' for reg in Region.REGIONS)
                 
     @commands.command(name='rem', help='Remove from queue on region (NA/EU/ALL = default)', ignore_extra=False)
-    @commands.cooldown(2, 10)
+    @commands.cooldown(CMD_RATE, CMD_COOLDOWN)
     async def on_remove(self, ctx, region : str = 'ALL'):
         if not self.model.ChkIsReg(ctx):
             return
@@ -96,11 +95,11 @@ class General(commands.Cog):
 
         self.model.queues.remove_all_of(region, playerId)
 
-        embed = discord.Embed(colour = discord.Colour.blue(), description = self.QueueStatus())
+        embed = discord.Embed(colour = discord.Colour.blue(), description = self.model.QueueStatus())
         await ctx.channel.send(content=f'`{playerName} removed from: {", ".join(regions)}`', embed=embed)
         
     @commands.command(name='stats', help='Retreive stats of player', ignore_extra=False)
-    @commands.cooldown(2, 10)
+    @commands.cooldown(CMD_RATE, CMD_COOLDOWN)
     async def on_stats(self, ctx, member : discord.Member):
         if not self.model.ChkIsReg(ctx):
             return
@@ -126,7 +125,7 @@ Win/Loss/Tie
         await ctx.channel.send(content=f"`Stats {playerName}`", embed=embed)
 
     @commands.command(name='status', help='Query status of queue and any running games')
-    @commands.cooldown(2, 10)
+    @commands.cooldown(CMD_RATE, CMD_COOLDOWN)
     async def on_status(self, ctx):
         if not self.model.ChkIsReg(ctx):
             return

@@ -8,13 +8,14 @@ import asyncio
 from PlayerDB import PlayerDB
 from Game import Game, State
 from Player import Player, MatchRes
-
+from Utility import CodeB, CodeSB
 from PQueue import PQueue
 
 class Model(commands.Cog):  
     TIME_TO_PICK = 5  #in seconds
     #TIME_TO_PICK = 60  #in seconds
     QUEUE_TIMEOUT = 60 # in minutes
+    QUEUE_TIMEOUT_EV = 5 # in minnutes
     PRIV_CHAN_ID = 710245665896398899
     PRIV_CAT_ID = 711399900008415232
 
@@ -33,10 +34,11 @@ class Model(commands.Cog):
         self.privChannel = None
         self.autoPickTasks = dict()
         self.privVChannels = dict()
+        self.evInit = asyncio.Event()
     
     def __enter__(self):
         self.bot = commands.Bot(command_prefix='!')
-        self.PickTimeoutNA.start()
+        self.pick_timeout.start()
 
     def cog_unload(self):
         self.cleanup()
@@ -45,16 +47,38 @@ class Model(commands.Cog):
         self.cleanup()
     
     def cleanup(self):
-        self.PickTimeoutNA.cancel()
+        self.pick_timeout.cancel()
         self.playerDB.Close()
 
     def run(self):
         self.bot.run(self.TOKEN)
-        self.bot.wait_until_ready()
 
     #async def reset(self):
     #    self.bot.clear()
     #    await self.bot.wait_until_ready()
+
+    @tasks.loop(minutes=QUEUE_TIMEOUT_EV)
+    async def pick_timeout(self):
+        remQueues = dict()
+        for reg, queue in self.queues:
+            for id, timeQueued in queue.copy().items():
+                timeDelta = (datetime.now() - timeQueued).total_seconds() / 60.0
+                if timeDelta > Model.QUEUE_TIMEOUT:
+                    self.queues.remove(reg, id)
+                    playerName = self.IdToName(id)
+                    remQueues.setdefault(playerName, [])
+                    remQueues[playerName].append(reg)
+
+        if len(remQueues) != 0:
+            description = ""
+            for playerName, regSet in remQueues.items():      
+                description += f"-{playerName} timed out and removed from {', '.join(regSet)}\n"
+            #description += f"\n\n{self.QueueStatus()}"
+            embed = discord.Embed(colour = discord.Colour.blue(), description = CodeB(description, "diff"))
+            await self.privChannel.send(content = CodeSB(self.QueueStatus()), embed = embed)
+        #await self.privChannel.send( \
+        #    content=f"{playerName} was queued over {Model.QUEUE_TIMEOUT:.1f} mins and was automatically removed from {', '.join(remQueues)}", embed=embed)
+    
  
     @commands.Cog.listener()
     async def on_ready(self):
@@ -63,7 +87,12 @@ class Model(commands.Cog):
         self.category = discord.utils.get(self.guild.categories, id=Model.PRIV_CAT_ID)
 
         print(f'{self.bot.user.name} is connected to {self.guild.name} (id: {self.guild.id})\n')   
+        self.evInit.set()
 
+    
+    @pick_timeout.before_loop
+    async def before_pick_timeout(self):
+        await self.evInit.wait()
     @commands.Cog.listener()
     async def on_error(self, event, *args, **kwargs):
         with open('err.log', 'a') as f:
@@ -144,15 +173,13 @@ class Model(commands.Cog):
         else:
             await self.ShowTeamPickInfo(ctx, game)
 
-
     async def PickTimerHelper(self, ctx, game):
         while True:
             await asyncio.sleep(Model.TIME_TO_PICK)
             #channel = discord.utils.find(lambda name: name == "General", self.guild.text_channels)
-            await self.privChannel.send(f'{self.IdToName(game.playerTurn.id)} took too long...')
             pickedPlayer = game.PickAfk()
-            await self.privChannel.send(f'{self.IdToName(pickedPlayer.id)} added to {game.PlayerRace(pickedPlayer.id)}')
 
+            await ctx.send(f'{self.IdToName(game.playerTurn.id)} ({game.PlayerRace(pickedPlayer.id)}) timed out and chose {self.IdToName(pickedPlayer.id)}')
             await self.PickShow(ctx, game)
             if game.state == State.IN_GAME:
                 return
@@ -257,26 +284,15 @@ class Model(commands.Cog):
         for channel in self.privVChannels[game.region]:
             await channel.delete()
 
-    @tasks.loop(seconds=60)
-    async def PickTimeoutNA(self):
-        for reg, queue in self.queues:
-            for id, timeQueued in queue.copy().items():
-                timeDelta = (datetime.now() - timeQueued).total_seconds() / 60.0
-                if timeDelta > Model.QUEUE_TIMEOUT:
-                    self.queues.remove(reg, id)
-                    playerName = self.IdToName(id)
-                    await self.privChannel.send(f"{playerName} was queued over {Model.QUEUE_TIMEOUT:.1f} minutes and was automatically removed from queues")
-
-    @PickTimeoutNA.before_loop
-    async def before_printer(self):
-        await self.bot.wait_until_ready()
+    def QueueStatus(self):
+        return " ".join(f'[{reg}] {len(self.queues[reg])}/{Game.N_PLAYERS}' for reg in Region.REGIONS)
+        
 
     async def ValidateReg(self, ctx, region):
         if not Region.Valid(region):
             await ctx.send('Invalid region, expected: ' + '/'.join(Region.VALID_REGIONS))
             return False
         return True
-
     #async def MoveUsers(self, ids, channel):
     #    for id in ids:
     #        user = self.IdToUser(id)
