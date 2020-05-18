@@ -37,7 +37,7 @@ class Model(commands.Cog):
         self.evInit = asyncio.Event()
     
     def __enter__(self):
-        self.bot = commands.Bot(command_prefix='!')
+        self.bot = commands.Bot(command_prefix='!', help_command=commands.DefaultHelpCommand(command_attrs=dict(name='help-hex', aliases=['hex_help', 'help_hex', 'hex-help'])))
         self.pick_timeout.start()
 
     def cog_unload(self):

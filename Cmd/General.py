@@ -9,7 +9,7 @@ from Player import Player, MatchRes
 import Region
 from Utility import CodeB, CodeSB
 
-class General(commands.Cog):  
+class General(commands.Cog,):  
     CMD_RATE = 2
     CMD_COOLDOWN = 10   
     def __init__(self, model):
@@ -79,7 +79,7 @@ class General(commands.Cog):
         
         await self.ShowAddQueueStatus(ctx, player, regionsAddedTo)
                 
-    @commands.command(name='rem', help='Remove from queue on region (NA/EU/ALL = default)', ignore_extra=False)
+    @commands.command(name='del', aliases = ['rem'], help='Remove yourself from queue on region (NA/EU/ALL = default)', ignore_extra=False)
     @commands.cooldown(CMD_RATE, CMD_COOLDOWN)
     async def on_remove(self, ctx, region : str = 'ALL'):
         if not self.model.ChkIsReg(ctx):
@@ -93,15 +93,16 @@ class General(commands.Cog):
         playerId = ctx.message.author.id
         playerName = ctx.message.author.name
 
-        self.model.queues.remove_all_of(region, playerId)
-
-        embed = discord.Embed(colour = discord.Colour.blue(), description = self.model.QueueStatus())
-        await ctx.channel.send(content=f'`{playerName} removed from: {", ".join(regions)}`', embed=embed)
+        if self.model.queues.remove_all_of(region, playerId):
+            embed = discord.Embed(colour = discord.Colour.blue(), description = self.model.QueueStatus())
+            await ctx.channel.send(content=CodeSB(f'{playerName} removed from: {", ".join(regions)}'), embed=embed)
+        else:
+            await ctx.send(CodeSB(f'{playerName} not queued on any region'))
         
     @commands.command(name='stats', help='Retreive stats of player', ignore_extra=False)
     @commands.cooldown(CMD_RATE, CMD_COOLDOWN)
     async def on_stats(self, ctx, member : discord.Member):
-        if not self.model.ChkIsReg(ctx):
+        if not (self.model.ChkIsReg(ctx) and self.model.ChkIsRegId(member.id)):
             return
 
         playerName = member.name

@@ -14,12 +14,14 @@ class PQueue:
     def add(self, region, playerId):
         self.queue[region][playerId] = datetime.now()
 
+    #returns True if any where deleted
     def remove_all_of(self, region, playerId):
         if region == Region.ALL:
-            for reg in Region.REGIONS:
-                self.remove_all_of(reg, playerId)
+            return any([self.remove_all_of(reg, playerId) for reg in Region.REGIONS]) #list comprehension to ensure all are removed
         elif playerId in self.queue[region]:
-            self.queue[region].pop(playerId)
+            self.remove(region, playerId)
+            return True
+        return False
 
     def remove(self, region, playerId):
         self.queue[region].pop(playerId)
