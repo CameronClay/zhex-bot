@@ -81,7 +81,7 @@ class Captain(commands.Cog):
             return
 
         pSubWith = self.model.playerDB.Find(memSubWith.id, region)
-        game.Sub(memSub.id, memSub.id)
+        game.Sub(memSub, pSubWith)
         await ctx.send(f'{memSub.name} subbed with {memSubWith.name}')
     
     @commands.command(name='rw', help='Captain report win')

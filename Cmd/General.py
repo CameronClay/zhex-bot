@@ -35,7 +35,7 @@ class General(commands.Cog):
     
     async def ShowAddQueueStatus(self, ctx, playerName, regionsAddedTo):
         embed = discord.Embed(colour = discord.Colour.blue(), description = self.QueueStatus())
-        await ctx.channel.send(content=f'{playerName} added to: {", ".join(regionsAddedTo)}', embed=embed)
+        await ctx.channel.send(content=f'`{playerName} added to: {", ".join(regionsAddedTo)}`', embed=embed)
 
     @commands.command(name='add', help='Add to queue on region (NA/EU/ALL = default)', ignore_extra=False)
     @commands.cooldown(2, 10)
@@ -80,7 +80,7 @@ class General(commands.Cog):
     def QueueStatus(self):
         return " ".join(f'[{reg}] {len(self.model.queues[reg])}/{Game.N_PLAYERS}' for reg in Region.REGIONS)
                 
-    @commands.command(name='rem', help='Remove from current queue on region (NA/EU/ALL = default)', ignore_extra=False)
+    @commands.command(name='rem', help='Remove from queue on region (NA/EU/ALL = default)', ignore_extra=False)
     @commands.cooldown(2, 10)
     async def on_remove(self, ctx, region : str = 'ALL'):
         if not self.model.ChkIsReg(ctx):
@@ -97,7 +97,7 @@ class General(commands.Cog):
         self.model.queues.remove_all_of(region, playerId)
 
         embed = discord.Embed(colour = discord.Colour.blue(), description = self.QueueStatus())
-        await ctx.channel.send(content=f'{playerName} removed from: {", ".join(regions)}', embed=embed)
+        await ctx.channel.send(content=f'`{playerName} removed from: {", ".join(regions)}`', embed=embed)
         
     @commands.command(name='stats', help='Retreive stats of player', ignore_extra=False)
     @commands.cooldown(2, 10)

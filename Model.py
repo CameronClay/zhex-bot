@@ -12,7 +12,8 @@ from Player import Player, MatchRes
 from PQueue import PQueue
 
 class Model(commands.Cog):  
-    TIME_TO_PICK = 5 #in seconds
+    TIME_TO_PICK = 5  #in seconds
+    #TIME_TO_PICK = 60  #in seconds
     QUEUE_TIMEOUT = 60 # in minutes
     PRIV_CHAN_ID = 710245665896398899
     PRIV_CAT_ID = 711399900008415232
@@ -130,7 +131,7 @@ class Model(commands.Cog):
         players = self.IdsToNames(game.PoolIds)
         embed = discord.Embed(title=f'Picking teams on {game.region}', \
             description=f'Zerg Captain: {self.IdToName(game.zergCapt.id)} | Terran Captain: {self.IdToName(game.terranCapt.id)}')
-        embed.add_field(name=f"{self.IdToName(game.playerTurn.id)}'s pick", value=f'Players: {players}')
+        embed.add_field(name=f"{self.IdToName(game.playerTurn.id)}'s pick", value=f'Player pool: {players}')
        
         zerg = self.IdsToNames(game.zerg.Ids)
         terran = self.IdsToNames(game.terran.Ids)
