@@ -25,9 +25,9 @@ class Captain(commands.Cog):
             await ctx.send(f'Must be a captain in order to pick')
             return
 
-        #if choosingId == pickedId:
-        #    await ctx.send(f'Cannot pick self')
-        #    return
+        if choosingId == pickedId:
+            await ctx.send(f'Cannot pick self')
+            return
 
         game = self.model.games[region]
         if game.playerTurn.id != choosingId:
@@ -38,9 +38,9 @@ class Captain(commands.Cog):
             await ctx.send(f'Game already running')
             return
 
-        #if pickedId not in game.PoolIds():
-        #    await ctx.send(f"Player not currently playing")
-        #    return
+        if pickedId not in game.PoolIds():
+            await ctx.send(f"Player not currently playing")
+            return
 
         game.PickPlayer(pickedId)
 

@@ -32,7 +32,12 @@ class General(commands.Cog):
         else:
             await ctx.send(f'{playerName} successfully registered on {registeredRegs}')
 
-    @commands.command(name='add', help='Add to queue on region (NA/EU/ALL = default)')
+    
+    async def ShowAddQueueStatus(self, ctx, playerName, regionsAddedTo):
+        embed = discord.Embed(colour = discord.Colour.blue(), description = self.QueueStatus())
+        await ctx.channel.send(content=f'{playerName} added to: {", ".join(regionsAddedTo)}', embed=embed)
+
+    @commands.command(name='add', help='Add to queue on region (NA/EU/ALL = default)', ignore_extra=False)
     @commands.cooldown(2, 10)
     async def on_add(self, ctx, region : str ='ALL'):
         if not self.model.ChkIsReg(ctx):
@@ -46,9 +51,9 @@ class General(commands.Cog):
 
         regions = Region.ToList(region)
 
-        regionAddedTo = []
+        regionsAddedTo = []
         for reg in regions:
-            if True: #playerId not in queues[region].Ids:
+            if playerId not in self.model.queues[reg]:
                 if not any((self.model.games[newReg] != None and self.model.games[newReg].IsPlaying(playerId) \
                 for newReg in Region.REGIONS)): 
                     if len(self.model.queues[reg]) == Game.N_PLAYERS and \
@@ -56,22 +61,26 @@ class General(commands.Cog):
                         await ctx.send(f"{reg}'s queue is full")
                         return
                     self.model.queues.add(reg, playerId)
-                    regionAddedTo.append(reg)
+                    regionsAddedTo.append(reg)
 
                     if len(self.model.queues[reg]) == Game.N_PLAYERS:
-                        await self.model.StartTeamPick(ctx, reg)            
+                        for remReg in [r for r in regions if r != reg]:
+                            if playerId in self.model.queues[remReg]:
+                                self.model.queues.remove(remReg, playerId)
+                        await self.ShowAddQueueStatus(ctx, player, [reg])
+                        await self.model.StartTeamPick(ctx, reg) 
+                        return           
         
-        if len(regionAddedTo) == 0:
-            await ctx.send(f'{player} already added to {" ".join(regions)}')
+        if len(regionsAddedTo) == 0:
+            await ctx.send(f'{player} already added to {", ".join(regions)}')
             return
         
-        embed = discord.Embed(colour = discord.Colour.blue(), description = self.QueueStatus())
-        await ctx.channel.send(content=f'{player} added to: {", ".join(regionAddedTo)}', embed=embed)
+        await self.ShowAddQueueStatus(ctx, player, regionsAddedTo)
 
     def QueueStatus(self):
         return " ".join(f'[{reg}] {len(self.model.queues[reg])}/{Game.N_PLAYERS}' for reg in Region.REGIONS)
                 
-    @commands.command(name='rem', help='Remove from current queue on region (NA/EU/ALL = default)')
+    @commands.command(name='rem', help='Remove from current queue on region (NA/EU/ALL = default)', ignore_extra=False)
     @commands.cooldown(2, 10)
     async def on_remove(self, ctx, region : str = 'ALL'):
         if not self.model.ChkIsReg(ctx):

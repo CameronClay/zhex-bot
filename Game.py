@@ -18,11 +18,12 @@ def IdGen():
     return wrapper
 
 class Game:
-    N_PLAYERS = 3
-    TERRAN_PICK = 2
-    ZERG_PICK = 1
     SIZE_ZERG = 2
     SIZE_TERRAN = 6
+    N_PLAYERS = 8
+    
+    TERRAN_PICK = 2
+    ZERG_PICK = 1
 
     def __init__(self, region, playerPool):
         assert len(playerPool) == Game.N_PLAYERS

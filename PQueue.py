@@ -39,5 +39,5 @@ class PQueue:
 
     @property
     def ids(self):
-        return iter(self.queue)
+        return iter(self.queue.items())
 

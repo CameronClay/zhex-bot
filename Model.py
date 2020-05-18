@@ -130,7 +130,7 @@ class Model(commands.Cog):
         players = self.IdsToNames(game.PoolIds)
         embed = discord.Embed(title=f'Picking teams on {game.region}', \
             description=f'Zerg Captain: {self.IdToName(game.zergCapt.id)} | Terran Captain: {self.IdToName(game.terranCapt.id)}')
-        embed.add_field(name=f"{self.IdToName(game.playerTurn.id)}'s pick", value=f'players={players}')
+        embed.add_field(name=f"{self.IdToName(game.playerTurn.id)}'s pick", value=f'Players: {players}')
        
         zerg = self.IdsToNames(game.zerg.Ids)
         terran = self.IdsToNames(game.terran.Ids)

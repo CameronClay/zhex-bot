@@ -16,7 +16,7 @@ class PlayerDB:
                     elo        real,
                     lastPlayed text,
                     primary key (id, region)
-                    unique(id, region)
+                    unique (id, region)
                     );''')
 
     def IsRegistered(self, playerId, region):
