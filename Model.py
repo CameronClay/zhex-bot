@@ -35,8 +35,16 @@ class Model(commands.Cog):
     
     def __enter__(self):
         self.bot = commands.Bot(command_prefix='!')
+        self.PickTimeoutNA.start()
+
+    def cog_unload(self):
+        self.cleanup()
 
     def __exit__(self, exc_type, exc_val, exc_tb):
+        self.cleanup()
+    
+    def cleanup(self):
+        self.PickTimeoutNA.cancel()
         self.playerDB.Close()
 
     def run(self):
@@ -52,8 +60,6 @@ class Model(commands.Cog):
         self.guild = discord.utils.get(self.bot.guilds, name=self.GUILD)
         self.privChannel = self.bot.get_channel(Model.PRIV_CHAN_ID)
         self.category = discord.utils.get(self.guild.categories, id=Model.PRIV_CAT_ID)
-
-        self.PickTimeoutNA.start()
 
         print(f'{self.bot.user.name} is connected to {self.guild.name} (id: {self.guild.id})\n')   
 
@@ -102,7 +108,7 @@ class Model(commands.Cog):
         #return bot.get_user(id).name
 
     def IdsToNames(self, ids):
-        return [self.IdToName(id) for id in ids]
+        return ", ".join(self.IdToName(id) for id in ids)
 
     async def StartGame(self, ctx, game):
         embed = discord.Embed(title=f"Game Starting on {game.region}", description=f"Start a prepicked lobby and arrange teams, one captain report back the result of the game with rw/rl/rt")
@@ -259,6 +265,16 @@ class Model(commands.Cog):
                     self.queues.remove(reg, id)
                     playerName = self.IdToName(id)
                     await self.privChannel.send(f"{playerName} was queued over {Model.QUEUE_TIMEOUT:.1f} minutes and was automatically removed from queues")
+
+    @PickTimeoutNA.before_loop
+    async def before_printer(self):
+        await self.bot.wait_until_ready()
+
+    async def ValidateReg(self, ctx, region):
+        if not Region.Valid(region):
+            await ctx.send('Invalid region, expected: ' + '/'.join(Region.VALID_REGIONS))
+            return False
+        return True
 
     #async def MoveUsers(self, ids, channel):
     #    for id in ids:

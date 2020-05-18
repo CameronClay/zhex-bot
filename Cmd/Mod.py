@@ -15,6 +15,9 @@ class Mod(commands.Cog):
     @commands.has_role('MOD')
     @commands.cooldown(2, 10)
     async def on_unregister(self, ctx, member : discord.Member, region : str = Region.ALL):
+        if not await self.model.ValidateReg(ctx, region):
+            return
+
         self.model.playerDB.UnRegister(member.id, region)
         await ctx.send(f'{member.name} successfully unregistered on {region}')
 
@@ -22,6 +25,9 @@ class Mod(commands.Cog):
     @commands.has_role('MOD')
     @commands.cooldown(2, 10)
     async def on_force_end(self, ctx, region : str = Region.ALL):
+        if not await self.model.ValidateReg(ctx, region):
+            return
+
         if region == Region.ALL:
             for reg in Region.REGIONS:
                 self.on_force_end(ctx, reg)
@@ -47,6 +53,9 @@ class Mod(commands.Cog):
     @commands.has_role('MOD')
     @commands.cooldown(2, 10)
     async def on_set_stats(self, ctx, member : discord.Member, region : str, wins : int, loses : int):
+        if not await self.model.ValidateReg(ctx, region):
+            return
+
         playerName = member.name
 
         usPlayer = self.model.playerDB.Find(member.id, region)
@@ -64,6 +73,9 @@ class Mod(commands.Cog):
     @commands.has_role('MOD')
     @commands.cooldown(2, 10)
     async def on_queue_bot(self, ctx, region : str, count : int):
+        if not await self.model.ValidateReg(ctx, region):
+            return
+
         self.model.CreateStubs(region, count)
         await ctx.send(f'Queued {count} bots on {region}')
     #@commands.command(name='reset', help='Reset bot (does not clear any stats)')

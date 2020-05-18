@@ -38,45 +38,57 @@ class General(commands.Cog):
         if not self.model.ChkIsReg(ctx):
             return
 
+        if not await self.model.ValidateReg(ctx, region):
+            return
+
         player = ctx.message.author.name
         playerId = ctx.message.author.id
 
-        if region == Region.ALL:
-            for reg in Region.REGIONS:
-                #if player not in queues[reg].Ids:
-                if not any((self.model.games[newReg] != None and self.model.games[newReg].IsPlaying(playerId) \
-                for newReg in Region.REGIONS)): #necessary if a player causes a game to start and queued on both Region.REGIONS
-                    await self.on_add(ctx, reg)
-            return
-                    
-        if region in Region.REGIONS:
-            if True: #playerId not in queues[region].Ids:
-                if len(self.model.queues[region]) == Game.N_PLAYERS and \
-                self.model.games[region].state == State.IN_GAME:
-                    await ctx.send(f"{region}'s queue is full")
-                    return
-                self.model.queues.add(region, playerId)
-                await ctx.send(f'{player} added to {region} {len(self.model.queues[region])}/{Game.N_PLAYERS}')
+        regions = Region.ToList(region)
 
-                if len(self.model.queues[region]) == Game.N_PLAYERS:
-                    await self.model.StartTeamPick(ctx, region)
-            else:
-                await ctx.send(f'{player} already added to {region}')
-        else:
-            await ctx.send('Invalid region, expected: ' + '/'.join(Region.REGIONS))
+        regionAddedTo = []
+        for reg in regions:
+            if True: #playerId not in queues[region].Ids:
+                if not any((self.model.games[newReg] != None and self.model.games[newReg].IsPlaying(playerId) \
+                for newReg in Region.REGIONS)): 
+                    if len(self.model.queues[reg]) == Game.N_PLAYERS and \
+                    self.model.games[reg].state == State.IN_GAME:
+                        await ctx.send(f"{reg}'s queue is full")
+                        return
+                    self.model.queues.add(reg, playerId)
+                    regionAddedTo.append(reg)
+
+                    if len(self.model.queues[reg]) == Game.N_PLAYERS:
+                        await self.model.StartTeamPick(ctx, reg)            
+        
+        if len(regionAddedTo) == 0:
+            await ctx.send(f'{player} already added to {" ".join(regions)}')
             return
+        
+        embed = discord.Embed(colour = discord.Colour.blue(), description = self.QueueStatus())
+        await ctx.channel.send(content=f'{player} added to: {", ".join(regionAddedTo)}', embed=embed)
+
+    def QueueStatus(self):
+        return " ".join(f'[{reg}] {len(self.model.queues[reg])}/{Game.N_PLAYERS}' for reg in Region.REGIONS)
                 
-    @commands.command(name='rem', help='Remove from current queues')
+    @commands.command(name='rem', help='Remove from current queue on region (NA/EU/ALL = default)')
     @commands.cooldown(2, 10)
-    async def on_remove(self, ctx):
+    async def on_remove(self, ctx, region : str = 'ALL'):
         if not self.model.ChkIsReg(ctx):
             return
+        
+        if not await self.model.ValidateReg(ctx, region):
+            return
+
+        regions = Region.ToList(region)
 
         playerId = ctx.message.author.id
         playerName = ctx.message.author.name
 
-        self.model.queues.remove_all(Region.ALL, playerId)
-        await ctx.send(f'{playerName} removed from all queues!')
+        self.model.queues.remove_all_of(region, playerId)
+
+        embed = discord.Embed(colour = discord.Colour.blue(), description = self.QueueStatus())
+        await ctx.channel.send(content=f'{playerName} removed from: {", ".join(regions)}', embed=embed)
         
     @commands.command(name='stats', help='Retreive stats of player', ignore_extra=False)
     @commands.cooldown(2, 10)
@@ -86,7 +98,7 @@ class General(commands.Cog):
 
         playerName = member.name
 
-        embed = discord.Embed(title=f"Stats {playerName}", colour = discord.Colour.blue())
+        embed = discord.Embed(colour = discord.Colour.blue())
         for region in Region.REGIONS:
             usPlayer = self.model.playerDB.Find(member.id, region)
             if usPlayer and usPlayer.lastPlayed:
@@ -102,7 +114,7 @@ Win/Loss/Tie
 '''
 
                 embed.add_field(name=region, value=CodeB(msg, "ml"), inline = False)
-        await ctx.channel.send(content=None, embed=embed)
+        await ctx.channel.send(content=f"`Stats {playerName}`", embed=embed)
 
     @commands.command(name='status', help='Query status of queue and any running games')
     @commands.cooldown(2, 10)
@@ -110,13 +122,14 @@ Win/Loss/Tie
         if not self.model.ChkIsReg(ctx):
             return
 
+        embed = discord.Embed(colour = discord.Colour.blue())
         for region, queue in self.model.queues:
             queued = self.model.IdsToNames(queue.keys())
-            embed = discord.Embed(title=f"Status of {region}", description=f"Queued {len(queue)}/{Game.N_PLAYERS}\n Players: {queued}")
+            embed.add_field(name=f"{region} [{len(queue)}/{Game.N_PLAYERS}]", value=f"In Queue: {queued}", inline=False)
             if self.model.games[region] != None and self.model.games[region].state == State.IN_GAME:
                 game = self.model.games[region]
                 zerg = self.model.IdsToNames(game.zerg.Ids)
                 terran = self.model.IdsToNames(game.terran.Ids)
                 runningDuration = int(game.RunningDuration().total_seconds() / 60)
-                embed.add_field(name=f"Running for {runningDuration} min", value=f"Zerg: {zerg}\nTerran: {terran}")
-            await ctx.channel.send(content=None, embed=embed)
+                embed.add_field(name=f"Running for {runningDuration} min", value=f"Zerg: {zerg}\nTerran: {terran}", inline=False)
+        await ctx.channel.send(content=None, embed=embed)
