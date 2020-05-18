@@ -41,7 +41,7 @@ class PlayerDB:
 
     def UnRegister(self, playerId, region):
         if region == Region.ALL:
-            self.conn.execute(f'''delete from players where id = ?''', (playerId))
+            self.conn.execute(f'''delete from players where id = ?''', (playerId, ))
         else:
             self.conn.execute(f'''delete from players where id = ? and region = ?''', (playerId, region))
         self.conn.commit()
