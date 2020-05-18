@@ -47,6 +47,7 @@ class Game:
         return player
 
     def Sub(self, pSubId, pSubWith):
+        assert self.state != State.IN_GAME, "Cannot pick player while playing"
         self.playerPool.remove(pSubId)
         self.playerPool[pSubWith.id] = pSubWith
 

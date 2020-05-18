@@ -39,6 +39,44 @@ class General(commands.Cog,):
         embed = discord.Embed(colour = discord.Colour.blue(), description = self.model.QueueStatus())
         await ctx.channel.send(content=CodeSB(f'{playerName} added to: {", ".join(regionsAddedTo)}'), embed=embed)
 
+    @commands.command(name='add_sub', help='Allow yourself to be a potential sub on region')
+    @commands.cooldown(CMD_RATE, CMD_COOLDOWN)
+    async def on_sub(self, ctx, region : str ='ALL'):
+        if not self.model.ChkIsReg(ctx):
+            return
+
+        if not await self.model.ValidateReg(ctx, region):
+            return
+
+        playerName = ctx.message.author.name
+        playerId = ctx.message.author.id
+
+        regions = Region.ToList(region)
+
+        for reg in regions:
+            self.model.subs[reg].add(playerId)
+        
+        await ctx.send(CodeSB(f'{playerName} now avaiable to sub on {", ".join(regions)}'))
+
+    @commands.command(name='del_sub', aliases = ['rem_sub'], help='Remove yourself as potential sub on region')
+    @commands.cooldown(CMD_RATE, CMD_COOLDOWN)
+    async def del_sub(self, ctx, region : str ='ALL'):
+        if not self.model.ChkIsReg(ctx):
+            return
+
+        if not await self.model.ValidateReg(ctx, region):
+            return
+
+        playerName = ctx.message.author.name
+        playerId = ctx.message.author.id
+
+        regions = Region.ToList(region)
+
+        for reg in regions:
+            self.model.subs[reg].discard(playerId)
+        
+        await ctx.send(CodeSB(f'{playerName} no longer avaiable to sub on {", ".join(regions)}'))
+
     @commands.command(name='add', help=f'Add to queue on region (NA/EU/ALL = default); Timeout={Model.QUEUE_TIMEOUT} mins', ignore_extra=False)
     @commands.cooldown(CMD_RATE, CMD_COOLDOWN)
     async def on_add(self, ctx, region : str ='ALL'):

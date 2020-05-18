@@ -28,6 +28,7 @@ class Model(commands.Cog):
         #self.queues = {reg:set() for reg in Region.REGIONS}
         self.queues = PQueue()
         self.games = {reg:None for reg in Region.REGIONS}
+        self.subs = {reg:set() for reg in Region.REGIONS}
 
         self.playerDB = PlayerDB()
         self.category = None
@@ -141,6 +142,7 @@ class Model(commands.Cog):
         return ", ".join(self.IdToName(id) for id in ids)
 
     async def StartGame(self, ctx, game):
+        self.subs[game.region].clear()
         embed = discord.Embed(title=f"Game Starting on {game.region}", description=f"Start a prepicked lobby and arrange teams, one captain report back the result of the game with rw/rl/rt")
         zerg = self.IdsToNames(game.zerg.Ids)
         terran = self.IdsToNames(game.terran.Ids)
@@ -233,6 +235,13 @@ class Model(commands.Cog):
 
         await self.DeleteVoice(game)
         self.games[region] =  None
+
+    async def PickPlayer(self, ctx, game, choosingPlayer, pickedId, pickedPlayer):
+        self.subs[game.region].discard(pickedId)
+        game.PickPlayer(pickedId)
+        await ctx.send(f'{choosingPlayer} ({game.PlayerRace(pickedId)}) chose {pickedPlayer}')
+        await self.PickShow(ctx, game)
+        await self.StartPickTimer(ctx, game)
 
     def CreateStubs(self, region, nStubs):
         if region == Region.ALL:
