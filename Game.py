@@ -22,8 +22,8 @@ class Game:
     SIZE_TERRAN = 6
     N_PLAYERS = 8
     
-    TERRAN_PICK = 2
-    ZERG_PICK = 1
+    TERRAN_PICK_CNT = 2
+    ZERG_PICK_CNT = 1
 
     def __init__(self, region, playerPool):
         assert len(playerPool) == Game.N_PLAYERS
@@ -85,15 +85,14 @@ class Game:
 
         self.__PickLastPlayer()
 
-    def ChangeTurn(self):
-        if (self.pickedCnt == State.TERRAN_PICK) and (self.state == State.TERRAN_PICK):
+    def ChangeTurn(self):   
+        self.pickedCnt += 1
+        if (self.pickedCnt == Game.TERRAN_PICK_CNT) and (self.state == State.TERRAN_PICK):
             self.state = State.ZERG_PICK
             self.playerTurn = self.zergCapt
         else:
             self.state = State.TERRAN_PICK
             self.playerTurn = self.terranCapt
-
-        self.pickedCnt += 1
 
     def CaptOnTeam(self, playerId):
         return self.zergCapt.id == playerId or self.terranCapt.id == playerId
