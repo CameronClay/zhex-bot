@@ -53,7 +53,7 @@ class Captain(commands.Cog):
         if not game:
             return
             
-        if pickedId not in game.PoolIds():
+        if pickedId not in game.PoolIds:
             await ctx.send(f"{pickedPlayer} not in player pool")
             return
 
@@ -65,16 +65,19 @@ class Captain(commands.Cog):
         if not (self.model.ChkIsRegId(memSub.id) and self.model.ChkIsRegId(memSubWith.id)):
             await ctx.send(f'All subbed players must be registered')
 
-        game = await self.can_pick(ctx, memSub.id, memSub.name, memSubWith.id)
+        choosingId = ctx.message.author.id
+        choosingPlayer = ctx.message.author.name
+
+        game = await self.can_pick(ctx, choosingId, choosingPlayer, memSubWith.id)
         if not game:
             return
 
-        if memSubWith.id in any(self.model.games and self.model.games[reg].IsPlaying(memSub.id) for reg in Region.REGIONS):
-            await ctx.send(f"{memSub.name} already in game/player pool")
+        if any(self.model.games[reg] and self.model.games[reg].IsPlaying(memSubWith.id) for reg in Region.REGIONS):
+            await ctx.send(f"{memSubWith.name} already in game/player pool")
             return
 
-        if memSubWith.id not in self.model.subs:
-            await ctx.send(f"{memSub.name} has not agreed to sub (they can allow themself sub via !sub <region>")
+        if memSubWith.id not in self.model.subs[game.region]:
+            await ctx.send(f"{memSubWith.name} has not agreed to sub (they can allow themself sub via !sub <region>")
             return
 
         #must validate memSubWith.id not in another game already but should already be handled with above check
@@ -82,7 +85,7 @@ class Captain(commands.Cog):
         pSubWith = self.model.playerDB.Find(memSubWith.id, game.region)
         game.Sub(memSub.id, pSubWith)
         await ctx.send(f'{memSub.name} subbed with {memSubWith.name} on {game.region}')
-        await self.model.PickPlayer(ctx, game, ctx.member.name, memSubWith.id, memSubWith.name)
+        await self.model.PickPlayer(ctx, game, choosingPlayer, memSubWith.id, memSubWith.name)
     
     @commands.command(name='rw', help='Captain report win')
     @commands.cooldown(CMD_RATE, CMD_COOLDOWN)

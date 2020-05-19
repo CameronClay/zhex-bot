@@ -14,7 +14,7 @@ class Region:
     @classmethod
     async def convert(cls, ctx, argument):
         if not argument.upper() in Region.VALID_REGIONS:
-            raise commands.ArgumentParsingError(f"Invalid argument; expected {'/'.join(Region.VALID_REGIONS)}")
+            raise commands.ArgumentParsingError(f"Invalid region; expected {'/'.join(Region.VALID_REGIONS)}")
         
         return cls(argument)
 

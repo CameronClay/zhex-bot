@@ -43,7 +43,7 @@ class Game:
 
     def ChooseCaptain(self, race : Race):
         oppRace = Race.Invert(race)
-        players = filter(lambda p: p.racePref != oppRace, list(self.PoolPlayers))
+        players = filter(lambda p: p.racePref.race != oppRace, list(self.PoolPlayers))
 
         player = max(players, key=lambda player: player.elo[race])
         self.playerPool.pop(player.id)
@@ -52,7 +52,7 @@ class Game:
 
     def Sub(self, pSubId, pSubWith):
         assert self.state != State.IN_GAME, "Cannot pick player while playing"
-        self.playerPool.remove(pSubId)
+        self.playerPool.pop(pSubId)
         self.playerPool[pSubWith.id] = pSubWith
 
     def __AddPlayer(self, player):  
@@ -85,7 +85,7 @@ class Game:
 
         self.__AddPlayer(player)
 
-        self.playerPool.remove(player)
+        self.playerPool.pop(player.id)
 
         self.__PickLastPlayer()
 
@@ -151,7 +151,11 @@ class Game:
         return pickedPlayer
     
     def IsPlaying(self, playerId):
-        return playerId in itertools.chain(self.zerg.Ids, self.terran.Ids, self.PoolIds)
+        return playerId in self.AllPlayers
+
+    @property
+    def AllPlayers(self):
+        return itertools.chain(self.zerg.Ids, self.terran.Ids, self.PoolIds)
 
     @property
     def PoolIds(self):

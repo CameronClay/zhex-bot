@@ -12,7 +12,7 @@ from Utility import CodeB, CodeSB
 from PQueue import PQueue
 
 class Model(commands.Cog):  
-    TIME_TO_PICK = 2  #in seconds
+    TIME_TO_PICK = 60  #in seconds
     #TIME_TO_PICK = 60  #in seconds
     QUEUE_TIMEOUT = 60 # in minutes
     QUEUE_TIMEOUT_EV = 5 # in minnutes
@@ -38,7 +38,7 @@ class Model(commands.Cog):
         self.evInit = asyncio.Event()
     
     def __enter__(self):
-        self.bot = commands.Bot(command_prefix='!', help_command=commands.DefaultHelpCommand(command_attrs=dict(name='help'), width=120))#, aliases=['hex_help', 'help_hex', 'hex-help'])))
+        self.bot = commands.Bot(command_prefix='!', help_command=commands.DefaultHelpCommand(command_attrs=dict(name='help'), width=120, dm_help=True))#, aliases=['hex_help', 'help_hex', 'hex-help'])))
         self.pick_timeout.start()
 
     def cog_unload(self):
@@ -143,13 +143,20 @@ class Model(commands.Cog):
     def IdsToNames(self, ids):
         return ", ".join(self.IdToName(id) for id in ids)
 
-    async def StartGame(self, ctx, game):
+    def RemoveInGameFromQueue(self, game):
         self.subs[game.region].clear()
-        embed = discord.Embed(title=f"Game Starting on {game.region}", description=f"Start a prepicked lobby and arrange teams, one captain report back the result of the game with rw/rl/rt")
+        for id in game.AllPlayers:
+            self.queues.remove_all_of(game.region, id)
+
+    async def StartGame(self, ctx, game):
+        self.RemoveInGameFromQueue(game)
+
+        embed = discord.Embed(description=f"Start a prepicked lobby and arrange teams, one captain report back the result of the game with rw/rl/rt",\
+            colour = discord.Colour.blue())
         zerg = self.IdsToNames(game.zerg.Ids)
         terran = self.IdsToNames(game.terran.Ids)
         embed.add_field(name="Teams", value=f"Zerg: {zerg}\nTerran: {terran}")
-        await ctx.channel.send(content=None, embed=embed)
+        await ctx.channel.send(content=CodeB(f"Game Starting on {game.region}", 'md'), embed=embed)
         await self.CreateVoice(game)
 
     async def StartTeamPick(self, ctx, region):
@@ -162,14 +169,14 @@ class Model(commands.Cog):
 
     async def ShowTeamPickInfo(self, ctx, game):
         playerPool = ', '.join(f'{self.IdToName(player.id)}({player.racePref.race})' for player in list(game.PoolPlayers))
-        embed = discord.Embed(title=f'Picking teams on {game.region}', \
-            description=f'Zerg Captain: {self.IdToName(game.zergCapt.id)} | Terran Captain: {self.IdToName(game.terranCapt.id)}')
-        embed.add_field(name=f"{self.IdToName(game.playerTurn.id)}'s pick", value=f'Player pool: {playerPool}')
+        embed = discord.Embed(description=CodeB(f'Captains - <Zerg> {self.IdToName(game.zergCapt.id)} | <Terran> {self.IdToName(game.terranCapt.id)}', 'md'), \
+            colour = discord.Colour.blue())
+        embed.add_field(name=f"{self.IdToName(game.playerTurn.id)}'s pick", value=CodeB(f'<Pool> {playerPool}', 'md'))
        
         zerg = self.IdsToNames(game.zerg.Ids)
         terran = self.IdsToNames(game.terran.Ids)
-        embed.add_field(name="Teams", value=f"Zerg: {zerg}\n Terran: {terran}")
-        await ctx.channel.send(content=None, embed=embed)
+        embed.add_field(name="Teams", value=CodeB(f"<Zerg> {zerg}\n<Terran> {terran}", 'md'))
+        await ctx.channel.send(content=CodeSB(f'Picking teams on {game.region}'), embed=embed)
 
     async def PickShow(self, ctx, game):
         if game.state == State.IN_GAME:
@@ -179,13 +186,17 @@ class Model(commands.Cog):
 
     async def PickTimerHelper(self, ctx, game):
         while True:
-            await asyncio.sleep(Model.TIME_TO_PICK)
-            #channel = discord.utils.find(lambda name: name == "General", self.guild.text_channels)
-            pickedPlayer = game.PickAfk()
+            try:
+                await asyncio.sleep(Model.TIME_TO_PICK)
+                #channel = discord.utils.find(lambda name: name == "General", self.guild.text_channels)
+                playerTurn = self.IdToName(game.playerTurn.id)
+                pickedPlayer = game.PickAfk()
 
-            await ctx.send(f'{self.IdToName(game.playerTurn.id)} ({game.PlayerRace(pickedPlayer.id)}) timed out and chose {self.IdToName(pickedPlayer.id)}')
-            await self.PickShow(ctx, game)
-            if game.state == State.IN_GAME:
+                await ctx.send(f'{playerTurn} ({game.PlayerRace(pickedPlayer.id)}) timed out and chose {self.IdToName(pickedPlayer.id)}')
+                await self.PickShow(ctx, game)
+                if game.state == State.IN_GAME:
+                    return
+            except asyncio.CancelledError:
                 return
 
     async def StartPickTimer(self, ctx, game):
@@ -198,7 +209,7 @@ class Model(commands.Cog):
             self.autoPickTasks[game.region].cancel()
             try:
                 await self.autoPickTasks[game.region]
-            except Exception:
+            except asyncio.CancelledError:
                 pass
             self.autoPickTasks.pop(game.region)
 
@@ -222,7 +233,7 @@ class Model(commands.Cog):
         newZElo = [(self.IdToName(player.id), int(player.zelo)) for player in game.zerg.players]
         newTElo = [(self.IdToName(player.id), int(player.telo)) for player in game.terran.players]
 
-        embed = discord.Embed(title=f"Match Concluded on {game.region}", description=f"Victor: {game.GetVictor(playerId, res)}")
+        embed = discord.Embed(description=f"Victor: {game.GetVictor(playerId, res)}", colour = discord.Colour.blue())
         #embed.add_field(name="Prior Zerg elo's", value=f"{oldTElo}")
         #zUpddElos = [(oldElo, newElo) for oldElo, newElo in zip(oldZElo, newZElo)]
         nameMax = max(len(name) for name, _ in oldZElo)
@@ -233,7 +244,7 @@ class Model(commands.Cog):
         embed.add_field(name="Updated T elo's: ", value=strTUpdElos)
         #embed.add_field(name="Prior elo's", value=f"Zerg: {oldZElo}\n Terran: {oldTElo}")
         #embed.add_field(name="Updated elo's", value=f"Zerg: {newZElo}\n Terran: {newTElo}")
-        await ctx.channel.send(content=None, embed=embed)
+        await ctx.channel.send(content=CodeSB(f"Match Concluded on {game.region}"), embed=embed)
 
         await self.DeleteVoice(game)
         self.games[region] =  None
@@ -306,6 +317,74 @@ class Model(commands.Cog):
             await ctx.send('Invalid region, expected: ' + '/'.join(Region.VALID_REGIONS))
             return False
         return True
+
+    async def ShowAddQueueStatus(self, ctx, playerName, regionsAddedTo):
+        embed = discord.Embed(description = self.QueueStatus(), colour = discord.Colour.blue())
+        await ctx.channel.send(content=CodeSB(f'{playerName} added to: {", ".join(regionsAddedTo)}'), embed=embed)
+
+    async def AddPlayerQueue(self, ctx, playerName, playerId, region : Region):
+        regions = region.ToList()
+
+        regionsAddedTo = []
+        for reg in regions:
+            if playerId not in self.queues[reg]:
+                if not any((self.games[newReg] != None and self.games[newReg].IsPlaying(playerId) \
+                for newReg in Region.REGIONS)): 
+                    if len(self.queues[reg]) == Game.N_PLAYERS and \
+                    self.games[reg].state == State.IN_GAME:
+                        await ctx.send(f"{reg}'s queue is full")
+                        return
+                    self.queues.add(reg, playerId)
+                    regionsAddedTo.append(reg)
+
+                    if len(self.queues[reg]) == Game.N_PLAYERS:
+                        for remReg in [r for r in regions if r != reg]:
+                            if playerId in self.queues[remReg]:
+                                self.queues.remove(remReg, playerId)
+                        await self.ShowAddQueueStatus(ctx, playerName, [reg])
+                        await self.StartTeamPick(ctx, reg) 
+                        return           
+        
+        if len(regionsAddedTo) == 0:
+            await ctx.send(f'{playerName} already added to {", ".join(regions)}')
+            return
+        
+        await self.ShowAddQueueStatus(ctx, playerName, regionsAddedTo)
+    
+    async def RemPlayerQueue(self, ctx, playerName, playerId, region : Region):
+        if self.queues.remove_all_of(region.region, playerId):
+            embed = discord.Embed(colour = discord.Colour.blue(), description = self.QueueStatus())
+            await ctx.channel.send(content=CodeSB(f'{playerName} removed from: {", ".join(region.ToList())}'), embed=embed)
+        else:
+            await ctx.send(CodeSB(f'{playerName} not queued on any region'))
+
+    async def AddPlayerSub(self, ctx, playerName, playerId, region : Region):
+        regions = region.ToList()
+
+        if any((self.games[reg] and ((self.games[reg].state == State.IN_GAME) \
+        or (playerId in self.games[reg].PoolIds)) for reg in regions)):
+            await ctx.send(CodeSB(f'Cannot sub when in game or in player pool'))
+            return
+
+        subbedRegs = []
+        for reg in regions:
+            if self.games[reg]:
+                self.subs[reg].add(playerId)
+                subbedRegs.append(reg)
+
+        if len(subbedRegs) == 0:
+            await ctx.send(CodeSB(f'No game found to sub/already in a pool'))
+        else:
+            await ctx.send(CodeSB(f'{playerName} now avaiable to sub on {", ".join(subbedRegs)}'))
+
+    async def RemPlayerSub(self, ctx, playerName, playerId, region : Region):
+        regions = region.ToList()
+
+        for reg in regions:
+            self.subs[reg].discard(playerId)
+        
+        await ctx.send(CodeSB(f'{playerName} no longer avaiable to sub on {", ".join(regions)}'))
+
     #async def MoveUsers(self, ids, channel):
     #    for id in ids:
     #        user = self.IdToUser(id)
