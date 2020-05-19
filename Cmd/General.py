@@ -1,12 +1,12 @@
+import discord
 from discord.ext import commands
 from Model import Model
 import itertools
-import discord
 from datetime import datetime
 
 from Game import Game, State
-from Player import Player, MatchRes
-import Region
+from Player import Player, MatchRes, RacePref
+from Region import Region
 from Utility import CodeB, CodeSB
 
 class General(commands.Cog,):  
@@ -32,45 +32,45 @@ class General(commands.Cog,):
             await ctx.send(f'{playerName} already registered')
             return
         else:
-            await ctx.send(f'{playerName} successfully registered on {registeredRegs}')
+            await ctx.send(f'{playerName} successfully registered on {", ".join(registeredRegs)}')
 
     
     async def ShowAddQueueStatus(self, ctx, playerName, regionsAddedTo):
         embed = discord.Embed(colour = discord.Colour.blue(), description = self.model.QueueStatus())
         await ctx.channel.send(content=CodeSB(f'{playerName} added to: {", ".join(regionsAddedTo)}'), embed=embed)
 
-    @commands.command(name='add_sub', help='Allow yourself to be a potential sub on region')
+    @commands.command(name='add_sub', help='Allow yourself to be a potential sub on region (captains must already be picking)')
     @commands.cooldown(CMD_RATE, CMD_COOLDOWN)
-    async def on_sub(self, ctx, region : str ='ALL'):
+    async def on_sub(self, ctx, region : Region = Region(Region.ALL)):
         if not self.model.ChkIsReg(ctx):
-            return
-
-        if not await self.model.ValidateReg(ctx, region):
             return
 
         playerName = ctx.message.author.name
         playerId = ctx.message.author.id
 
-        regions = Region.ToList(region)
+        regions = region.ToList()
 
+        subbedRegs = []
         for reg in regions:
-            self.model.subs[reg].add(playerId)
-        
-        await ctx.send(CodeSB(f'{playerName} now avaiable to sub on {", ".join(regions)}'))
+            if self.model.games[reg] and self.model.games[reg].state != State.IN_GAME:
+                self.model.subs[reg].add(playerId)
+                subbedRegs.append(reg)
+
+        if len(subbedRegs) == 0:
+            await ctx.send(CodeSB(f'No game found to sub'))
+        else:
+            await ctx.send(CodeSB(f'{playerName} now avaiable to sub on {", ".join(subbedRegs)}'))
 
     @commands.command(name='del_sub', aliases = ['rem_sub'], help='Remove yourself as potential sub on region')
     @commands.cooldown(CMD_RATE, CMD_COOLDOWN)
-    async def del_sub(self, ctx, region : str ='ALL'):
+    async def del_sub(self, ctx, region : Region = Region(Region.ALL)):
         if not self.model.ChkIsReg(ctx):
-            return
-
-        if not await self.model.ValidateReg(ctx, region):
             return
 
         playerName = ctx.message.author.name
         playerId = ctx.message.author.id
 
-        regions = Region.ToList(region)
+        regions = region.ToList()
 
         for reg in regions:
             self.model.subs[reg].discard(playerId)
@@ -79,17 +79,14 @@ class General(commands.Cog,):
 
     @commands.command(name='add', help=f'Add to queue on region (NA/EU/ALL = default); Timeout={Model.QUEUE_TIMEOUT} mins', ignore_extra=False)
     @commands.cooldown(CMD_RATE, CMD_COOLDOWN)
-    async def on_add(self, ctx, region : str ='ALL'):
+    async def on_add(self, ctx, region : Region = Region(Region.ALL)):
         if not self.model.ChkIsReg(ctx):
-            return
-
-        if not await self.model.ValidateReg(ctx, region):
             return
 
         player = ctx.message.author.name
         playerId = ctx.message.author.id
 
-        regions = Region.ToList(region)
+        regions = region.ToList()
 
         regionsAddedTo = []
         for reg in regions:
@@ -119,21 +116,16 @@ class General(commands.Cog,):
                 
     @commands.command(name='del', aliases = ['rem'], help='Remove yourself from queue on region (NA/EU/ALL = default)', ignore_extra=False)
     @commands.cooldown(CMD_RATE, CMD_COOLDOWN)
-    async def on_remove(self, ctx, region : str = 'ALL'):
+    async def on_remove(self, ctx, region : Region = Region(Region.ALL)):
         if not self.model.ChkIsReg(ctx):
             return
-        
-        if not await self.model.ValidateReg(ctx, region):
-            return
-
-        regions = Region.ToList(region)
 
         playerId = ctx.message.author.id
         playerName = ctx.message.author.name
 
-        if self.model.queues.remove_all_of(region, playerId):
+        if self.model.queues.remove_all_of(region.region, playerId):
             embed = discord.Embed(colour = discord.Colour.blue(), description = self.model.QueueStatus())
-            await ctx.channel.send(content=CodeSB(f'{playerName} removed from: {", ".join(regions)}'), embed=embed)
+            await ctx.channel.send(content=CodeSB(f'{playerName} removed from: {", ".join(region.ToList())}'), embed=embed)
         else:
             await ctx.send(CodeSB(f'{playerName} not queued on any region'))
         
@@ -151,7 +143,7 @@ class General(commands.Cog,):
             if usPlayer and usPlayer.lastPlayed:
                 ties = usPlayer.games - usPlayer.wins - usPlayer.loses
                 elo = f'{int(usPlayer.elo)}'.ljust(4)
-                winPer = f'{usPlayer.Ratio*100:.1f}'.ljust(5)
+                winPer = (f'{usPlayer.Ratio*100:.1f}' if (usPlayer.wins + usPlayer.loses > 0) else '-').ljust(5)
 
                 msg = f'''Win %\tElo\tLast Played
 {winPer}\t{elo}   {usPlayer.lastPlayed}
@@ -180,3 +172,28 @@ Win/Loss/Tie
                 runningDuration = int(game.RunningDuration().total_seconds() / 60)
                 embed.add_field(name=f"Running for {runningDuration} min", value=f"Zerg: {zerg}\nTerran: {terran}", inline=False)
         await ctx.channel.send(content=None, embed=embed)
+
+    @commands.command(name='racepref', help='Set/query race preference for region (0 = ZERG, 1 = TERRAN, 2 = ANY)')
+    @commands.cooldown(CMD_RATE, CMD_COOLDOWN)
+    async def on_set_racepref(self, ctx, racePref : int, region : Region = Region(Region.ALL)):
+        if not self.model.ChkIsReg(ctx):
+            return
+
+        playerId = ctx.message.author.id
+        playerName = ctx.message.author.name
+
+        if not(racePref >= RacePref.ZERG and racePref <= RacePref.ANY):
+            await ctx.send(f'Invalid race preference; expected (0 = ZERG, 1 = TERRAN, 2 = ANY)')
+            return
+
+        racePref = RacePref(racePref)
+        regions = region.ToList()
+        for reg in regions:
+            usPlayer = self.model.playerDB.Find(playerId, region)
+            if usPlayer == None:
+                await ctx.send(f'Player {playerName} not registered')
+
+            usPlayer.racePref = racePref
+            self.model.playerDB.UpdateStats(usPlayer)
+
+        await ctx.send(CodeSB(f"{playerName}'s' preference updated to {racePref.name} on {', '.joinregions.ToList()}"))

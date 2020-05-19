@@ -1,16 +1,26 @@
-NA = 'NA'
-EU = 'EU'
-ALL = 'ALL'
+import discord
+from discord.ext import commands
 
-REGIONS = [NA, EU]
-VALID_REGIONS = REGIONS.copy()
-VALID_REGIONS.append(ALL)
+class Region:
+    NA = 'NA'
+    EU = 'EU'
+    ALL = 'ALL'
+    REGIONS = [NA, EU]
+    VALID_REGIONS = [NA, EU, ALL]
 
-def Valid(region):
-    return region in VALID_REGIONS
+    def __init__(self, region):
+        self.region = region
 
-def ToList(region):
-    if Valid(region):
-        return REGIONS if region == ALL else [region]
+    @classmethod
+    async def convert(cls, ctx, argument):
+        if not argument in Region.VALID_REGIONS:
+            raise commands.ArgumentParsingError(f"Invalid argument; expected {'/'.join(Region.VALID_REGIONS)}")
         
-    return []
+        return cls(argument)
+
+    def Valid(self):
+         return self.region in Region.VALID_REGIONS
+    
+    def ToList(self):
+        if self.Valid():
+            return Region.REGIONS if self.region == Region.ALL else [self.region]

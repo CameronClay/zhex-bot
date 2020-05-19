@@ -5,7 +5,7 @@ import discord
 
 from Game import State
 from Player import MatchRes
-import Region
+from Region import Region
 
 class Captain(commands.Cog):
     CMD_RATE = 2

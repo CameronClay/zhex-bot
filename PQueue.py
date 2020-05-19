@@ -1,4 +1,4 @@
-import Region
+from Region import Region
 from datetime import datetime
 
 class PQueue:

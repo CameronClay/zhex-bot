@@ -1,6 +1,6 @@
 import sqlite3
 from Player import Player
-import Region
+from Region import Region
 
 class PlayerDB:
     DATABASE_NAME = 'players.db'
@@ -15,6 +15,7 @@ class PlayerDB:
                     games      integer,
                     elo        real,
                     lastPlayed text,
+                    racePref   integer,
                     primary key (id, region)
                     unique (id, region)
                     );''')
@@ -35,8 +36,9 @@ class PlayerDB:
         return None
 
     def Register(self, player):
-        self.conn.execute('''insert or ignore into players (id, region, wins, loses, games, elo, lastPlayed)
-                    values (?, ?, ?, ?, ?, ?, ?)''', (player.id, player.region, player.wins, player.loses, player.games, player.elo, player.lastPlayed))
+        self.conn.execute('''insert or ignore into players (id, region, wins, loses, games, elo, lastPlayed, racePref)
+                    values (?, ?, ?, ?, ?, ?, ?, ?)''', (player.id, player.region, player.wins, player.loses, player.games, 
+                    player.elo, player.lastPlayed, player.racePref))
         self.conn.commit()
 
     def UnRegister(self, playerId, region):
@@ -53,10 +55,11 @@ class PlayerDB:
                 loses = ?, 
                 games = ?,
                 elo = ?, 
-                lastPlayed = ?
+                lastPlayed = ?,
+                racePref = ?
             where id = ? and region = ?'''
 
-        self.conn.execute(sql, (player.wins, player.loses, player.games, player.elo, player.lastPlayed, player.id, player.region))
+        self.conn.execute(sql, (player.wins, player.loses, player.games, player.elo, player.lastPlayed, player.racePref, player.id, player.region))
         self.conn.commit()
         
     def Close(self):

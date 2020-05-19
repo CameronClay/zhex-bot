@@ -1,4 +1,4 @@
-import Region
+from Region import Region
 import itertools
 from datetime import datetime
 
@@ -12,7 +12,7 @@ from Utility import CodeB, CodeSB
 from PQueue import PQueue
 
 class Model(commands.Cog):  
-    TIME_TO_PICK = 5  #in seconds
+    TIME_TO_PICK = 2  #in seconds
     #TIME_TO_PICK = 60  #in seconds
     QUEUE_TIMEOUT = 60 # in minutes
     QUEUE_TIMEOUT_EV = 5 # in minnutes
@@ -34,7 +34,7 @@ class Model(commands.Cog):
         self.category = None
         self.privChannel = None
         self.autoPickTasks = dict()
-        self.privVChannels = dict()
+        self.privVChannelIds = dict()
         self.evInit = asyncio.Event()
     
     def __enter__(self):
@@ -263,13 +263,13 @@ class Model(commands.Cog):
         newChannels = set()
         zChannel = await self.guild.create_voice_channel(zChannelN, category = self.category, user_limit=Game.SIZE_ZERG)
         await self.SetVoicePerm(game.zerg.Ids, zChannel)
-        newChannels.add(zChannel)
+        newChannels.add(zChannel.id)
 
         tChannel = await self.guild.create_voice_channel(tChannelN, category = self.category, user_limit=Game.SIZE_TERRAN)
         await self.SetVoicePerm(game.terran.Ids, tChannel)
-        newChannels.add(tChannel)
+        newChannels.add(tChannel.id)
 
-        self.privVChannels[game.region] = newChannels
+        self.privVChannelIds[game.region] = newChannels
         
         #newRoles = set()
         #zRole = self.guild.create_role(zChannelN)
@@ -290,8 +290,10 @@ class Model(commands.Cog):
 
     async def DeleteVoice(self, game):
     #    await self.MoveUsers(itertools.chain(game.zerg.Ids, game.terran.Ids), self.privChannel)
-        for channel in self.privVChannels[game.region]:
-            await channel.delete()
+        for channelId in self.privVChannelIds[game.region]:
+            channel = self.bot.get_channel(channelId)
+            if channel:
+                await channel.delete()
 
     def QueueStatus(self):
         return " ".join(f'[{reg}] {len(self.queues[reg])}/{Game.N_PLAYERS}' for reg in Region.REGIONS)

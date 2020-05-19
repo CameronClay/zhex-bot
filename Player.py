@@ -7,9 +7,14 @@ class MatchRes(IntEnum):
     LOSS = 0,
     TIE = 2
 
+class RacePref(IntEnum):
+    ZERG = 0,
+    TERRAN = 1,
+    ANY = 2
+
 class Player:
     AMOUNT = 50
-    def __init__(self, id, region, wins = 0, loses = 0, games = 0, elo = 1500, lastPlayed = None):
+    def __init__(self, id, region, wins = 0, loses = 0, games = 0, elo = 1500, lastPlayed = None, racePref = RacePref.ANY):
         self.id = id
         self.region = region
         self.wins = wins
@@ -17,6 +22,7 @@ class Player:
         self.games = games
         self.elo = elo
         self.lastPlayed = lastPlayed
+        self.racePref = racePref
 
     @property
     def Ratio(self):
