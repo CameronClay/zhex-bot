@@ -1,9 +1,10 @@
 from Team import Team
 from enum import Enum
 from copy import deepcopy
-from Player import MatchRes
+from Player import MatchRes, RacePref
 import itertools
 from datetime import datetime, timezone
+from random import randint
 
 class State(Enum):
     ZERG_PICK = 0,
@@ -32,16 +33,19 @@ class Game:
         self.region = region
         self.state = State.TERRAN_PICK
         self.playerPool = {player.id:player for player in playerPool}
-        self.zergCapt = self.ChooseCaptain()
-        self.terranCapt = self.ChooseCaptain()
+        self.zergCapt = self.ChooseCaptain(State.ZERG_PICK)
+        self.terranCapt = self.ChooseCaptain(State.TERRAN_PICK)
         self.zerg = Team(self.zergCapt)
         self.terran = Team(self.terranCapt)
         self.playerTurn = self.terranCapt
         self.pickedCnt = 0
         self.timeStarted = None
 
-    def ChooseCaptain(self):
-        player = max(self.playerPool.values(), key=lambda player: player.elo)
+    def ChooseCaptain(self, team : State):
+        filterPref = RacePref.ZERG if team == State.TERRAN_PICK else RacePref.TERRAN
+        players = filter(lambda p: p.racePref != filterPref, list(self.PoolPlayers))
+
+        player = max(players, key=lambda player: player.elo)
         self.playerPool.pop(player.id)
 
         return player
@@ -133,7 +137,15 @@ class Game:
             raise AssertionError(f"Must be a captain to report match")
 
     def PickAfk(self):
-        _,pickedPlayer = self.playerPool.popitem()
+        filterPref = RacePref.ZERG if self.state == State.TERRAN_PICK else RacePref.TERRAN
+        players = list(filter(lambda p: p.racePref != filterPref, list(self.PoolPlayers)))
+        pickedPlayer = None
+        if len(players) == 0:
+            _,pickedPlayer = self.playerPool.popitem()
+        else:
+            pickedPlayer = players[randint(0, len(players) - 1)]
+            self.playerPool.pop(pickedPlayer.id)
+
         self.__AddPlayer(pickedPlayer)
         self.__PickLastPlayer()
         return pickedPlayer
@@ -144,6 +156,10 @@ class Game:
     @property
     def PoolIds(self):
       return self.playerPool.keys()
+
+    @property
+    def PoolPlayers(self):
+      return self.playerPool.values()
 
     def RunningDuration(self):
         return datetime.now() - self.timeStarted

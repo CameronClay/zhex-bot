@@ -159,10 +159,10 @@ class Model(commands.Cog):
         await self.StartPickTimer(ctx, game)
 
     async def ShowTeamPickInfo(self, ctx, game):
-        players = self.IdsToNames(game.PoolIds)
+        playerPool = ', '.join(f'{self.IdToName(player.id)}({player.racePref.name[0]})' for player in list(game.PoolPlayers))
         embed = discord.Embed(title=f'Picking teams on {game.region}', \
             description=f'Zerg Captain: {self.IdToName(game.zergCapt.id)} | Terran Captain: {self.IdToName(game.terranCapt.id)}')
-        embed.add_field(name=f"{self.IdToName(game.playerTurn.id)}'s pick", value=f'Player pool: {players}')
+        embed.add_field(name=f"{self.IdToName(game.playerTurn.id)}'s pick", value=f'Player pool: {playerPool}')
        
         zerg = self.IdsToNames(game.zerg.Ids)
         terran = self.IdsToNames(game.terran.Ids)

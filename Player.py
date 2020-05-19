@@ -22,7 +22,7 @@ class Player:
         self.games = games
         self.elo = elo
         self.lastPlayed = lastPlayed
-        self.racePref = racePref
+        self.racePref = RacePref(racePref) #because of db conversion to int
 
     @property
     def Ratio(self):

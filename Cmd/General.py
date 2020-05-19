@@ -189,11 +189,11 @@ Win/Loss/Tie
         racePref = RacePref(racePref)
         regions = region.ToList()
         for reg in regions:
-            usPlayer = self.model.playerDB.Find(playerId, region)
+            usPlayer = self.model.playerDB.Find(playerId, reg)
             if usPlayer == None:
                 await ctx.send(f'Player {playerName} not registered')
 
             usPlayer.racePref = racePref
             self.model.playerDB.UpdateStats(usPlayer)
 
-        await ctx.send(CodeSB(f"{playerName}'s' preference updated to {racePref.name} on {', '.joinregions.ToList()}"))
+        await ctx.send(CodeSB(f"{playerName}'s preference updated to {racePref.name} on {', '.join(regions)}"))
