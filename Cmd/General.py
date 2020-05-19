@@ -155,10 +155,10 @@ class General(commands.Cog,):
                     stats.append(f'''[{race}] Win %\tElo\tWin/Loss/Tie
 \t{winPer}\t{elo}   {wins}/{loses}/{ties}''')
 
-            msg = "\n\n".join(stats)
-            msg += f'\n\nLast Played: {usPlayer.lastPlayed}'
+                msg = "\n\n".join(stats)
+                msg += f'\n\nLast Played: {usPlayer.lastPlayed}'
 
-            embed.add_field(name=region, value=CodeB(msg, "ml"), inline = False)
+                embed.add_field(name=region, value=CodeB(msg, "ml"), inline = False)
 
         await ctx.channel.send(content=f"`Stats {playerName}`", embed=embed)
 
@@ -180,7 +180,7 @@ class General(commands.Cog,):
                 embed.add_field(name=f"Running for {runningDuration} min", value=f"Zerg: {zerg}\nTerran: {terran}", inline=False)
         await ctx.channel.send(content=None, embed=embed)
 
-    @commands.command(name='racepref', help='Set/query race preference for region (Z - Zerg, T - Terran, A - Any)')
+    @commands.command(name='racepref', help='Set race preference for region (Z - Zerg, T - Terran, A - All)')
     @commands.cooldown(CMD_RATE, CMD_COOLDOWN)
     async def on_set_racepref(self, ctx, racePref : Race, region : Region = Region(Region.ALL)):
         if not self.model.ChkIsReg(ctx):
@@ -189,11 +189,6 @@ class General(commands.Cog,):
         playerId = ctx.message.author.id
         playerName = ctx.message.author.name
 
-        #if not(racePref >= Race.ZERG and racePref <= Race.ANY):
-        #    await ctx.send(f'Invalid race preference; expected (0 = ZERG, 1 = TERRAN, 2 = ANY)')
-        #    return
-#
-        #racePref = RacePref(racePref)
         regions = region.ToList()
         for reg in regions:
             usPlayer = self.model.playerDB.Find(playerId, reg)
@@ -204,3 +199,24 @@ class General(commands.Cog,):
             self.model.playerDB.UpdateStats(usPlayer)
 
         await ctx.send(CodeSB(f"{playerName}'s preference updated to {racePref.race} on {', '.join(regions)}"))
+
+    @commands.command(name='qracepref', help='Query current race preference for region')
+    @commands.cooldown(CMD_RATE, CMD_COOLDOWN)
+    async def on_qracepref(self, ctx,  region : Region = Region(Region.ALL)):
+        if not self.model.ChkIsReg(ctx):
+            return
+
+        playerId = ctx.message.author.id
+        playerName = ctx.message.author.name
+
+        regions = region.ToList()
+        racePrefs = dict()
+        for reg in regions:
+            usPlayer = self.model.playerDB.Find(playerId, reg)
+            if usPlayer == None:
+                await ctx.send(f'Player {playerName} not registered')
+
+            racePrefs[reg] = usPlayer.racePref
+        
+        racePrefStr = [f'{reg}: {pref.race}' for reg, pref in racePrefs.items()]
+        await ctx.send(CodeSB(f"{playerName}'s race preference: {', '.join(racePrefStr)}"))
