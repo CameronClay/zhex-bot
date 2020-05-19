@@ -5,7 +5,7 @@ import itertools
 from datetime import datetime
 
 from Game import Game, State
-from Player import Player, MatchRes, RacePref
+from Player import Player, MatchRes, Race
 from Region import Region
 from Utility import CodeB, CodeSB
 
@@ -39,7 +39,7 @@ class General(commands.Cog,):
         embed = discord.Embed(colour = discord.Colour.blue(), description = self.model.QueueStatus())
         await ctx.channel.send(content=CodeSB(f'{playerName} added to: {", ".join(regionsAddedTo)}'), embed=embed)
 
-    @commands.command(name='add_sub', help='Allow yourself to be a potential sub on region (captains must already be picking)')
+    @commands.command(name='addsub', help='Allow yourself to be a potential sub on region (captains must already be picking)')
     @commands.cooldown(CMD_RATE, CMD_COOLDOWN)
     async def on_sub(self, ctx, region : Region = Region(Region.ALL)):
         if not self.model.ChkIsReg(ctx):
@@ -50,20 +50,25 @@ class General(commands.Cog,):
 
         regions = region.ToList()
 
+        if any((self.model.games[reg] and ((self.model.games[reg].state == State.IN_GAME) \
+        or (playerId in self.model.games[reg].PoolIds)) for reg in regions)):
+            await ctx.send(CodeSB(f'Cannot sub when in game or in player pool'))
+            return
+
         subbedRegs = []
         for reg in regions:
-            if self.model.games[reg] and self.model.games[reg].state != State.IN_GAME:
+            if self.model.games[reg]:
                 self.model.subs[reg].add(playerId)
                 subbedRegs.append(reg)
 
         if len(subbedRegs) == 0:
-            await ctx.send(CodeSB(f'No game found to sub'))
+            await ctx.send(CodeSB(f'No game found to sub/already in a pool'))
         else:
             await ctx.send(CodeSB(f'{playerName} now avaiable to sub on {", ".join(subbedRegs)}'))
 
-    @commands.command(name='del_sub', aliases = ['rem_sub'], help='Remove yourself as potential sub on region')
+    @commands.command(name='delsub', aliases = ['remsub'], help='Remove yourself as potential sub on region')
     @commands.cooldown(CMD_RATE, CMD_COOLDOWN)
-    async def del_sub(self, ctx, region : Region = Region(Region.ALL)):
+    async def on_del_sub(self, ctx, region : Region = Region(Region.ALL)):
         if not self.model.ChkIsReg(ctx):
             return
 
@@ -141,18 +146,20 @@ class General(commands.Cog,):
         for region in Region.REGIONS:
             usPlayer = self.model.playerDB.Find(member.id, region)
             if usPlayer and usPlayer.lastPlayed:
-                ties = usPlayer.games - usPlayer.wins - usPlayer.loses
-                elo = f'{int(usPlayer.elo)}'.ljust(4)
-                winPer = (f'{usPlayer.Ratio*100:.1f}' if (usPlayer.wins + usPlayer.loses > 0) else '-').ljust(5)
+                stats = []
+                for race in Race.RACES:
+                    wins, loses, ties, elo = usPlayer.wins[race], usPlayer.loses[race], usPlayer.ties[race], usPlayer.elo[race]
+                    elo = f'{int(elo)}'.ljust(4)
+                    winPer = (f'{usPlayer.Ratio(race)*100:.1f}' if (wins + loses > 0) else '-').ljust(5)
 
-                msg = f'''Win %\tElo\tLast Played
-{winPer}\t{elo}   {usPlayer.lastPlayed}
+                    stats.append(f'''[{race}] Win %\tElo\tWin/Loss/Tie
+\t{winPer}\t{elo}   {wins}/{loses}/{ties}''')
 
-Win/Loss/Tie
-{usPlayer.wins}/{usPlayer.loses}/{ties}
-'''
+            msg = "\n\n".join(stats)
+            msg += f'\n\nLast Played: {usPlayer.lastPlayed}'
 
-                embed.add_field(name=region, value=CodeB(msg, "ml"), inline = False)
+            embed.add_field(name=region, value=CodeB(msg, "ml"), inline = False)
+
         await ctx.channel.send(content=f"`Stats {playerName}`", embed=embed)
 
     @commands.command(name='status', help='Query status of queue and any running games')
@@ -173,20 +180,20 @@ Win/Loss/Tie
                 embed.add_field(name=f"Running for {runningDuration} min", value=f"Zerg: {zerg}\nTerran: {terran}", inline=False)
         await ctx.channel.send(content=None, embed=embed)
 
-    @commands.command(name='racepref', help='Set/query race preference for region (0 = ZERG, 1 = TERRAN, 2 = ANY)')
+    @commands.command(name='racepref', help='Set/query race preference for region (Z - Zerg, T - Terran, A - Any)')
     @commands.cooldown(CMD_RATE, CMD_COOLDOWN)
-    async def on_set_racepref(self, ctx, racePref : int, region : Region = Region(Region.ALL)):
+    async def on_set_racepref(self, ctx, racePref : Race, region : Region = Region(Region.ALL)):
         if not self.model.ChkIsReg(ctx):
             return
 
         playerId = ctx.message.author.id
         playerName = ctx.message.author.name
 
-        if not(racePref >= RacePref.ZERG and racePref <= RacePref.ANY):
-            await ctx.send(f'Invalid race preference; expected (0 = ZERG, 1 = TERRAN, 2 = ANY)')
-            return
-
-        racePref = RacePref(racePref)
+        #if not(racePref >= Race.ZERG and racePref <= Race.ANY):
+        #    await ctx.send(f'Invalid race preference; expected (0 = ZERG, 1 = TERRAN, 2 = ANY)')
+        #    return
+#
+        #racePref = RacePref(racePref)
         regions = region.ToList()
         for reg in regions:
             usPlayer = self.model.playerDB.Find(playerId, reg)
@@ -196,4 +203,4 @@ Win/Loss/Tie
             usPlayer.racePref = racePref
             self.model.playerDB.UpdateStats(usPlayer)
 
-        await ctx.send(CodeSB(f"{playerName}'s preference updated to {racePref.name} on {', '.join(regions)}"))
+        await ctx.send(CodeSB(f"{playerName}'s preference updated to {racePref.race} on {', '.join(regions)}"))

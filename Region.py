@@ -13,7 +13,7 @@ class Region:
 
     @classmethod
     async def convert(cls, ctx, argument):
-        if not argument in Region.VALID_REGIONS:
+        if not argument.upper() in Region.VALID_REGIONS:
             raise commands.ArgumentParsingError(f"Invalid argument; expected {'/'.join(Region.VALID_REGIONS)}")
         
         return cls(argument)
@@ -24,3 +24,4 @@ class Region:
     def ToList(self):
         if self.Valid():
             return Region.REGIONS if self.region == Region.ALL else [self.region]
+        return []

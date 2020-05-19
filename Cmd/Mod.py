@@ -4,7 +4,7 @@ import itertools
 import discord
 
 from Game import State
-from Player import MatchRes
+from Player import MatchRes, Race
 from Region import Region
 from Utility import CodeB, CodeSB
 
@@ -31,12 +31,13 @@ class Mod(commands.Cog):
         elif self.model.games[region.region]:
             await self.model.ReportMatchResult(ctx, MatchRes.TIE, self.model.games[region.region].zergCapt.id)
 
-    @commands.command(name='setelo', help="Set player's elo to #", ignore_extra=False)
+    @commands.command(name='setelo', help="Set player's elo to # on region for race(Z/T/A)", ignore_extra=False)
     @commands.has_role('MOD')
     @commands.cooldown(CMD_RATE, CMD_COOLDOWN)
-    async def on_set_elo(self, ctx, member : discord.Member, region : Region, elo : float):
+    async def on_set_elo(self, ctx, member : discord.Member, region : Region, race : Race, elo : float):
         playerName = member.name
         regions = region.ToList()
+        races = race.ToList()
 
         for reg in regions:
             usPlayer = self.model.playerDB.Find(member.id, reg)
@@ -44,17 +45,21 @@ class Mod(commands.Cog):
                 await ctx.send(f'Player {playerName} not registered')
                 return
 
-            usPlayer.elo = elo
-            self.model.playerDB.UpdateStats(usPlayer)
-        await ctx.send(f"Updated {playerName}'s' elo to {usPlayer.elo} on {', '.join(regions)}")
+            if not usPlayer.lastPlayed:
+                usPlayer.SetPlayed()
 
+            for r in races:
+                usPlayer.elo[r] = elo
+            self.model.playerDB.UpdateStats(usPlayer)
+        await ctx.send(f"Updated {playerName}'s' elo to {usPlayer.elo[races[0]]} for {', '.join(races)} on {', '.join(regions)}")
     
-    @commands.command(name='setstats', help="Set player's stats", ignore_extra=False)
+    @commands.command(name='setstats', help="Set player's stats on region for race(Z/T/A)", ignore_extra=False)
     @commands.has_role('MOD')
     @commands.cooldown(CMD_RATE, CMD_COOLDOWN)
-    async def on_set_stats(self, ctx, member : discord.Member, region : Region, games: int, wins : int, loses : int):
+    async def on_set_stats(self, ctx, member : discord.Member, region : Region, race : Race, wins : int, loses : int, ties : int):
         playerName = member.name
         regions = region.ToList()
+        races = race.ToList()
 
         for reg in regions:
             usPlayer = self.model.playerDB.Find(member.id, reg)
@@ -62,12 +67,16 @@ class Mod(commands.Cog):
                 await ctx.send(f'Player {playerName} not registered')
                 return
 
-            usPlayer.games = games
-            usPlayer.wins = wins
-            usPlayer.loses = loses
+            if not usPlayer.lastPlayed:
+                usPlayer.SetPlayed()
+
+            for r in races:
+                usPlayer.wins[r] = wins
+                usPlayer.loses[r] = loses
+                usPlayer.ties[r] = ties
             self.model.playerDB.UpdateStats(usPlayer)
 
-        await ctx.send(f"Updated {playerName}'s' games={usPlayer.games}, wins={usPlayer.wins}, loses={usPlayer.loses} on {', '.join(regions)}")
+        await ctx.send(f"Updated {playerName}'s' wins={usPlayer.wins[races[0]]}, loses={usPlayer.loses[races[0]]}, ties={usPlayer.ties[races[0]]} for {', '.join(races)} on {', '.join(regions)}")
     
     @commands.command(name='queue_bot', help='Queue # of bots on region', ignore_extra=False)
     @commands.has_role('MOD')

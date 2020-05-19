@@ -1,7 +1,7 @@
 from Team import Team
 from enum import Enum
 from copy import deepcopy
-from Player import MatchRes, RacePref
+from Player import MatchRes, Race
 import itertools
 from datetime import datetime, timezone
 from random import randint
@@ -33,19 +33,19 @@ class Game:
         self.region = region
         self.state = State.TERRAN_PICK
         self.playerPool = {player.id:player for player in playerPool}
-        self.zergCapt = self.ChooseCaptain(State.ZERG_PICK)
-        self.terranCapt = self.ChooseCaptain(State.TERRAN_PICK)
+        self.zergCapt = self.ChooseCaptain(Race.ZERG)
+        self.terranCapt = self.ChooseCaptain(Race.TERRAN)
         self.zerg = Team(self.zergCapt)
         self.terran = Team(self.terranCapt)
         self.playerTurn = self.terranCapt
         self.pickedCnt = 0
         self.timeStarted = None
 
-    def ChooseCaptain(self, team : State):
-        filterPref = RacePref.ZERG if team == State.TERRAN_PICK else RacePref.TERRAN
-        players = filter(lambda p: p.racePref != filterPref, list(self.PoolPlayers))
+    def ChooseCaptain(self, race : Race):
+        oppRace = Race.Invert(race)
+        players = filter(lambda p: p.racePref != oppRace, list(self.PoolPlayers))
 
-        player = max(players, key=lambda player: player.elo)
+        player = max(players, key=lambda player: player.elo[race])
         self.playerPool.pop(player.id)
 
         return player
@@ -128,16 +128,16 @@ class Game:
             notRes = MatchRes.WIN
 
         if captainId == self.zergCapt.id:
-            self.zerg.MatchResult(self.terran, res)
-            self.terran.MatchResult(self.zerg, notRes)
+            self.zerg.MatchResult(self.terran, Race.ZERG, res)
+            self.terran.MatchResult(self.zerg, Race.TERRAN, notRes)
         elif captainId == self.terranCapt.id:
-            self.zerg.MatchResult(self.terran, notRes)
-            self.terran.MatchResult(self.zerg, res)
+            self.zerg.MatchResult(self.terran, Race.ZERG, notRes)
+            self.terran.MatchResult(self.zerg, Race.TERRAN, res)
         else:
             raise AssertionError(f"Must be a captain to report match")
 
     def PickAfk(self):
-        filterPref = RacePref.ZERG if self.state == State.TERRAN_PICK else RacePref.TERRAN
+        filterPref = Race.ZERG if self.state == State.TERRAN_PICK else Race.TERRAN
         players = list(filter(lambda p: p.racePref != filterPref, list(self.PoolPlayers)))
         pickedPlayer = None
         if len(players) == 0:

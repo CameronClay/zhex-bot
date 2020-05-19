@@ -106,7 +106,9 @@ class Model(commands.Cog):
     async def on_command_error(self, ctx, error):
         #if isinstance(error, commands.errors.CheckFailure):
         #    await ctx.send(f'You do not have the correct role for this command')
-        if isinstance(error, commands.errors.UserInputError) \
+        if isinstance(error, commands.errors.ArgumentParsingError):
+            await ctx.send(error)
+        elif isinstance(error, commands.errors.UserInputError) \
         or isinstance(error, commands.errors.ConversionError):
             syntax = f"Syntax: {ctx.prefix}{ctx.command.name} {ctx.command.signature}"
             await ctx.send(syntax)
@@ -159,7 +161,7 @@ class Model(commands.Cog):
         await self.StartPickTimer(ctx, game)
 
     async def ShowTeamPickInfo(self, ctx, game):
-        playerPool = ', '.join(f'{self.IdToName(player.id)}({player.racePref.name[0]})' for player in list(game.PoolPlayers))
+        playerPool = ', '.join(f'{self.IdToName(player.id)}({player.racePref.race})' for player in list(game.PoolPlayers))
         embed = discord.Embed(title=f'Picking teams on {game.region}', \
             description=f'Zerg Captain: {self.IdToName(game.zergCapt.id)} | Terran Captain: {self.IdToName(game.terranCapt.id)}')
         embed.add_field(name=f"{self.IdToName(game.playerTurn.id)}'s pick", value=f'Player pool: {playerPool}')
@@ -211,14 +213,14 @@ class Model(commands.Cog):
             await ctx.send(f'Cannot report result of non-running game')
             return
             
-        oldZElo = [(self.IdToName(player.id), int(player.elo)) for player in game.zerg.players]
-        oldTElo = [(self.IdToName(player.id), int(player.elo)) for player in game.terran.players]
+        oldZElo = [(self.IdToName(player.id), int(player.zelo)) for player in game.zerg.players]
+        oldTElo = [(self.IdToName(player.id), int(player.telo)) for player in game.terran.players]
         game.MatchResult(playerId, res)
         for player in itertools.chain(game.zerg.players, game.terran.players):
             self.playerDB.UpdateStats(player)
 
-        newZElo = [(self.IdToName(player.id), int(player.elo)) for player in game.zerg.players]
-        newTElo = [(self.IdToName(player.id), int(player.elo)) for player in game.terran.players]
+        newZElo = [(self.IdToName(player.id), int(player.zelo)) for player in game.zerg.players]
+        newTElo = [(self.IdToName(player.id), int(player.telo)) for player in game.terran.players]
 
         embed = discord.Embed(title=f"Match Concluded on {game.region}", description=f"Victor: {game.GetVictor(playerId, res)}")
         #embed.add_field(name="Prior Zerg elo's", value=f"{oldTElo}")
@@ -227,8 +229,8 @@ class Model(commands.Cog):
         strZUpdElos = '\n'.join([f'{oldElo[0].ljust(nameMax)}: {oldElo[1]} -> {newElo[1]}' for oldElo, newElo in zip(oldZElo, newZElo)])
         strTUpdElos = '\n'.join([f'{oldElo[0].ljust(nameMax)}: {oldElo[1]} -> {newElo[1]}' for oldElo, newElo in zip(oldTElo, newTElo)])
         
-        embed.add_field(name="Updated Zerg elo's        ", value=strZUpdElos)
-        embed.add_field(name="Updated Terran elo's      ", value=strTUpdElos)
+        embed.add_field(name="Updated Z elo's: ", value=strZUpdElos)
+        embed.add_field(name="Updated T elo's: ", value=strTUpdElos)
         #embed.add_field(name="Prior elo's", value=f"Zerg: {oldZElo}\n Terran: {oldTElo}")
         #embed.add_field(name="Updated elo's", value=f"Zerg: {newZElo}\n Terran: {newTElo}")
         await ctx.channel.send(content=None, embed=embed)

@@ -10,12 +10,16 @@ class PlayerDB:
         cur.execute('''create table if not exists players (
                     id         integer,
                     region     text,
-                    wins       integer, 
-                    loses      integer,
-                    games      integer,
-                    elo        real,
+                    zwins      integer, 
+                    zloses     integer,
+                    zties      integer,
+                    zelo       real,
+                    twins      integer, 
+                    tloses     integer,
+                    tties      integer,
+                    telo       real,
                     lastPlayed text,
-                    racePref   integer,
+                    racePref   text,
                     primary key (id, region)
                     unique (id, region)
                     );''')
@@ -36,9 +40,10 @@ class PlayerDB:
         return None
 
     def Register(self, player):
-        self.conn.execute('''insert or ignore into players (id, region, wins, loses, games, elo, lastPlayed, racePref)
-                    values (?, ?, ?, ?, ?, ?, ?, ?)''', (player.id, player.region, player.wins, player.loses, player.games, 
-                    player.elo, player.lastPlayed, player.racePref))
+        self.conn.execute('''insert or ignore into players (id, region, zwins, zloses, zties, zelo, twins, tloses, tties, telo, lastPlayed, racePref)
+                    values (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)''', (player.id, player.region, player.zwins, player.zloses, player.zties, player.zelo,
+                    player.twins, player.tloses, player.tties, player.telo, 
+                    player.lastPlayed, player.racePref.race))
         self.conn.commit()
 
     def UnRegister(self, playerId, region):
@@ -51,15 +56,20 @@ class PlayerDB:
     def UpdateStats(self, player):
         sql = f'''update players
             set
-                wins = ?, 
-                loses = ?, 
-                games = ?,
-                elo = ?, 
+                zwins = ?, 
+                zloses = ?, 
+                zties = ?,
+                zelo = ?, 
+                twins = ?, 
+                tloses = ?, 
+                tties = ?,
+                telo = ?, 
                 lastPlayed = ?,
                 racePref = ?
             where id = ? and region = ?'''
 
-        self.conn.execute(sql, (player.wins, player.loses, player.games, player.elo, player.lastPlayed, player.racePref, player.id, player.region))
+        self.conn.execute(sql, (player.zwins, player.zloses, player.zties, player.zelo, player.twins, player.tloses, player.tties, player.telo,
+            player.lastPlayed, player.racePref.race, player.id, player.region))
         self.conn.commit()
         
     def Close(self):
