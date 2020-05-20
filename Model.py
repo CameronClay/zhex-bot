@@ -12,7 +12,7 @@ from Utility import CodeB, CodeSB
 from PQueue import PQueue
 
 class Model(commands.Cog):  
-    TIME_TO_PICK = 60  #in seconds
+    TIME_TO_PICK = 0.5  #in seconds
     #TIME_TO_PICK = 60  #in seconds
     QUEUE_TIMEOUT = 60 # in minutes
     QUEUE_TIMEOUT_EV = 5 # in minnutes
@@ -94,6 +94,7 @@ class Model(commands.Cog):
     @pick_timeout.before_loop
     async def before_pick_timeout(self):
         await self.evInit.wait()
+
     @commands.Cog.listener()
     async def on_error(self, event, *args, **kwargs):
         with open('err.log', 'a') as f:
@@ -131,6 +132,14 @@ class Model(commands.Cog):
         
     def IdToUser(self, id):
         return self.guild.get_member(id)
+    
+    def IdToMention(self, id):
+        member = self.guild.get_member(id)
+        return member.mention if member else str(id)
+
+    @staticmethod
+    def UserToMention(member, id):
+        return member.mention if member else f'@{id}'
 
     def IdToName(self, id):
         res = self.guild.get_member(id)
@@ -140,23 +149,37 @@ class Model(commands.Cog):
         return res.name
         #return bot.get_user(id).name
 
+    @staticmethod
+    def UserToName(member, id):
+        return member.name if member else str(id)
+
     def IdsToNames(self, ids):
         return ", ".join(self.IdToName(id) for id in ids)
 
     def RemoveInGameFromQueue(self, game):
-        self.subs[game.region].clear()
         for id in game.AllPlayers:
             self.queues.remove_all_of(game.region, id)
 
     async def StartGame(self, ctx, game):
         self.RemoveInGameFromQueue(game)
 
-        embed = discord.Embed(description=f"Start a prepicked lobby and arrange teams, one captain report back the result of the game with rw/rl/rt",\
-            colour = discord.Colour.blue())
-        zerg = self.IdsToNames(game.zerg.Ids)
-        terran = self.IdsToNames(game.terran.Ids)
-        embed.add_field(name="Teams", value=f"Zerg: {zerg}\nTerran: {terran}")
-        await ctx.channel.send(content=CodeB(f"Game Starting on {game.region}", 'md'), embed=embed)
+        zerg = [(self.IdToUser(id),id) for id in game.zerg.Ids]
+        terran = [(self.IdToUser(id),id) for id in game.terran.Ids]
+
+        zergNames = ", ".join(map(lambda memtup: Model.UserToName(memtup[0], memtup[1]), zerg))
+        terranNames = ", ".join(map(lambda memtup: Model.UserToName(memtup[0], memtup[1]), terran))
+
+        zergMentions = " ".join(map(lambda memtup: Model.UserToMention(memtup[0], memtup[1]), zerg))
+        terranMentions = " ".join(map(lambda memtup: Model.UserToMention(memtup[0], memtup[1]), terran))
+
+        description = f'''
+One captain start a prepicked lobby and arrange teams and report back the result of the game with < !rw/!rl/!rt >
+
+<Zerg> {zergNames}
+<Terran> {terranNames}
+'''
+        embed = discord.Embed(description=CodeB(description, 'md'), colour = discord.Colour.blue())
+        await ctx.channel.send(content=CodeSB(f"Game Starting on {game.region}") + f' {zergMentions} {terranMentions}', embed=embed)
         await self.CreateVoice(game)
 
     async def StartTeamPick(self, ctx, region):
@@ -164,19 +187,21 @@ class Model(commands.Cog):
         game = self.games[region] = Game(region, self.queues.to_players(region, self.playerDB))
         self.queues.clear(region)
 
-        await self.ShowTeamPickInfo(ctx, game)
+        await self.ShowTeamPickInfo(ctx, game, True)
         await self.StartPickTimer(ctx, game)
 
-    async def ShowTeamPickInfo(self, ctx, game):
+    async def ShowTeamPickInfo(self, ctx, game, pingCapts = False):
         playerPool = ', '.join(f'{self.IdToName(player.id)}({player.racePref.race})' for player in list(game.PoolPlayers))
-        embed = discord.Embed(description=CodeB(f'Captains - <Zerg> {self.IdToName(game.zergCapt.id)} | <Terran> {self.IdToName(game.terranCapt.id)}', 'md'), \
-            colour = discord.Colour.blue())
+        
+        zCapt = self.IdToMention(game.zergCapt.id) if pingCapts else f"`{self.IdToName(game.zergCapt.id)}`"
+        tCapt = self.IdToMention(game.terranCapt.id) if pingCapts else f"`{self.IdToName(game.terranCapt.id)}`"
+        embed = discord.Embed(colour = discord.Colour.blue())
         embed.add_field(name=f"{self.IdToName(game.playerTurn.id)}'s pick", value=CodeB(f'<Pool> {playerPool}', 'md'))
        
         zerg = self.IdsToNames(game.zerg.Ids)
         terran = self.IdsToNames(game.terran.Ids)
         embed.add_field(name="Teams", value=CodeB(f"<Zerg> {zerg}\n<Terran> {terran}", 'md'))
-        await ctx.channel.send(content=CodeSB(f'Picking teams on {game.region}'), embed=embed)
+        await ctx.channel.send(content=CodeSB(f'Picking teams on {game.region}') + f' - Captains - <Zerg> {zCapt} | <Terran> {tCapt}', embed=embed)
 
     async def PickShow(self, ctx, game):
         if game.state == State.IN_GAME:
@@ -192,7 +217,7 @@ class Model(commands.Cog):
                 playerTurn = self.IdToName(game.playerTurn.id)
                 pickedPlayer = game.PickAfk()
 
-                await ctx.send(f'{playerTurn} ({game.PlayerRace(pickedPlayer.id)}) timed out and chose {self.IdToName(pickedPlayer.id)}')
+                await ctx.send(f'`{playerTurn} ({game.PlayerRace(pickedPlayer.id)}) timed out and chose {self.IdToName(pickedPlayer.id)}`')
                 await self.PickShow(ctx, game)
                 if game.state == State.IN_GAME:
                     return
@@ -223,7 +248,9 @@ class Model(commands.Cog):
         if game == None or game.state != State.IN_GAME:
             await ctx.send(f'Cannot report result of non-running game')
             return
-            
+
+        self.subs[game.region].clear() 
+        
         oldZElo = [(self.IdToName(player.id), int(player.zelo)) for player in game.zerg.players]
         oldTElo = [(self.IdToName(player.id), int(player.telo)) for player in game.terran.players]
         game.MatchResult(playerId, res)
@@ -361,8 +388,7 @@ class Model(commands.Cog):
     async def AddPlayerSub(self, ctx, playerName, playerId, region : Region):
         regions = region.ToList()
 
-        if any((self.games[reg] and ((self.games[reg].state == State.IN_GAME) \
-        or (playerId in self.games[reg].PoolIds)) for reg in regions)):
+        if any((self.games[reg] and (playerId in self.games[reg].AllPlayers) for reg in regions)):
             await ctx.send(CodeSB(f'Cannot sub when in game or in player pool'))
             return
 

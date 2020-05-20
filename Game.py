@@ -51,9 +51,19 @@ class Game:
         return player
 
     def Sub(self, pSubId, pSubWith):
-        assert self.state != State.IN_GAME, "Cannot pick player while playing"
-        self.playerPool.pop(pSubId)
-        self.playerPool[pSubWith.id] = pSubWith
+        #assert self.state != State.IN_GAME, "Cannot pick player while playing"
+        if self.state == State.IN_GAME:
+            if pSubId in self.zerg.Ids:
+                self.zerg.Remove(pSubId)
+                self.zerg.Add(pSubWith)
+            elif pSubId in self.terran.Ids:
+                self.terran.Remove(pSubId)
+                self.terran.Add(pSubWith)
+            else:
+                raise AssertionError("Cannot sub player in illegal state")
+        else:
+            self.playerPool.pop(pSubId)
+            self.playerPool[pSubWith.id] = pSubWith
 
     def __AddPlayer(self, player):  
         if self.state == State.ZERG_PICK:

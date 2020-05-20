@@ -19,6 +19,9 @@ class Team:
     
     def Add(self, player):
         self.players.append(player)
+    
+    def Remove(self, playerId):
+        next(self.players.remove(player) for player in self.players if player.id == playerId)
 
     @property
     def Ids(self):

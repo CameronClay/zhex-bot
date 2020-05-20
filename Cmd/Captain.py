@@ -27,16 +27,7 @@ class Captain(commands.Cog):
             await ctx.send(f'Cannot pick self')
             return None
 
-        game = self.model.games[region]
-        if game.playerTurn.id != choosingId:
-            await ctx.send(f'Not your turn to pick')
-            return None
-
-        if game.state == State.IN_GAME:
-            await ctx.send(f'Game already running')
-            return None
-
-        return game
+        return self.model.games[region]
 
     @commands.command(name='pick', help='Pick member to be on your team', ignore_extra=False)
     @commands.cooldown(CMD_RATE, CMD_COOLDOWN)
@@ -52,10 +43,18 @@ class Captain(commands.Cog):
         game = await self.can_pick(ctx, choosingId, choosingPlayer, pickedId)
         if not game:
             return
+
+        if game.playerTurn.id != choosingId:
+            await ctx.send(f'Not your turn to pick')
+            return None
             
         if pickedId not in game.PoolIds:
             await ctx.send(f"{pickedPlayer} not in player pool")
-            return
+            return    
+        
+        if game.state == State.IN_GAME:
+            await ctx.send(f'Game already running')
+            return None
 
         await self.model.PickPlayer(ctx, game, choosingPlayer, pickedId, pickedPlayer)
 
@@ -85,7 +84,8 @@ class Captain(commands.Cog):
         pSubWith = self.model.playerDB.Find(memSubWith.id, game.region)
         game.Sub(memSub.id, pSubWith)
         await ctx.send(f'{memSub.name} subbed with {memSubWith.name} on {game.region}')
-        await self.model.PickPlayer(ctx, game, choosingPlayer, memSubWith.id, memSubWith.name)
+        if game.state != State.IN_GAME:
+            await self.model.PickPlayer(ctx, game, choosingPlayer, memSubWith.id, memSubWith.name)
     
     @commands.command(name='rw', help='Captain report win')
     @commands.cooldown(CMD_RATE, CMD_COOLDOWN)
