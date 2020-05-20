@@ -29,10 +29,10 @@ class General(commands.Cog):
                 registeredRegs.append(reg)
 
         if len(registeredRegs) == 0:
-            await ctx.send(f'{playerName} already registered')
+            await ctx.send(CodeSB(f'{playerName} already registered'))
             return
         else:
-            await ctx.send(f'{playerName} successfully registered on {", ".join(registeredRegs)}')
+            await ctx.send(CodeSB(f'{playerName} successfully registered on {", ".join(registeredRegs)}'))
 
     @commands.command(name='addsub', help='Allow yourself to be a potential sub on region (captains must already be picking)')
     @commands.cooldown(CMD_RATE, CMD_COOLDOWN)
@@ -125,7 +125,7 @@ class General(commands.Cog):
         for reg in regions:
             usPlayer = self.model.playerDB.Find(playerId, reg)
             if usPlayer == None:
-                await ctx.send(f'Player {playerName} not registered')
+                await ctx.send(CodeSB(f'Player {playerName} not registered'))
 
             usPlayer.racePref = racePref
             self.model.playerDB.UpdateStats(usPlayer)
@@ -146,7 +146,7 @@ class General(commands.Cog):
         for reg in regions:
             usPlayer = self.model.playerDB.Find(playerId, reg)
             if usPlayer == None:
-                await ctx.send(f'Player {playerName} not registered')
+                await ctx.send(CodeSB(f'Player {playerName} not registered'))
 
             racePrefs[reg] = usPlayer.racePref
         

@@ -7,6 +7,8 @@ from Game import State
 from Player import MatchRes
 from Region import Region
 
+from Utility import CodeB, CodeSB
+
 class Captain(commands.Cog):
     CMD_RATE = 2
     CMD_COOLDOWN = 10  
@@ -20,11 +22,11 @@ class Captain(commands.Cog):
 
         region = self.model.RegFromPlayer(choosingId)
         if region == None:
-            await ctx.send(f'Must be a captain in order to pick')
+            await ctx.send(CodeSB(f'Must be a captain in order to pick'))
             return None
 
         if choosingId == pickedId:
-            await ctx.send(f'Cannot pick self')
+            await ctx.send(CodeSB(f'Cannot pick self'))
             return None
 
         return self.model.games[region]
@@ -45,15 +47,15 @@ class Captain(commands.Cog):
             return
 
         if game.playerTurn.id != choosingId:
-            await ctx.send(f'Not your turn to pick')
+            await ctx.send(CodeSB(f'Not your turn to pick'))
             return None
             
         if pickedId not in game.PoolIds:
-            await ctx.send(f"{pickedPlayer} not in player pool")
+            await ctx.send(CodeSB(f"{pickedPlayer} not in player pool"))
             return    
         
         if game.state == State.IN_GAME:
-            await ctx.send(f'Game already running')
+            await ctx.send(CodeSB(f'Game already running'))
             return None
 
         await self.model.PickPlayer(ctx, game, choosingPlayer, pickedId, pickedPlayer)
@@ -62,7 +64,7 @@ class Captain(commands.Cog):
     @commands.cooldown(CMD_RATE, CMD_COOLDOWN)
     async def on_sub(self, ctx, memSub : discord.Member, memSubWith : discord.Member):
         if not (self.model.ChkIsRegId(memSub.id) and self.model.ChkIsRegId(memSubWith.id)):
-            await ctx.send(f'All subbed players must be registered')
+            await ctx.send(f'`All subbed players must be registered`')
 
         choosingId = ctx.message.author.id
         choosingPlayer = ctx.message.author.name
@@ -72,18 +74,18 @@ class Captain(commands.Cog):
             return
 
         if any(self.model.games[reg] and self.model.games[reg].IsPlaying(memSubWith.id) for reg in Region.REGIONS):
-            await ctx.send(f"{memSubWith.name} already in game/player pool")
+            await ctx.send(f"`{memSubWith.name} already in game/player pool`")
             return
 
         if memSubWith.id not in self.model.subs[game.region]:
-            await ctx.send(f"{memSubWith.name} has not agreed to sub (they can allow themself sub via !sub <region>")
+            await ctx.send(CodeSB(f"{memSubWith.name} has not agreed to sub (they can allow themself sub via !sub <region>"))
             return
 
         #must validate memSubWith.id not in another game already but should already be handled with above check
 
         pSubWith = self.model.playerDB.Find(memSubWith.id, game.region)
         game.Sub(memSub.id, pSubWith)
-        await ctx.send(f'{memSub.name} subbed with {memSubWith.name} on {game.region}')
+        await ctx.send(f'`{memSub.name} subbed with {memSubWith.name} on {game.region}`')
         if game.state != State.IN_GAME:
             await self.model.PickPlayer(ctx, game, choosingPlayer, memSubWith.id, memSubWith.name)
     

@@ -241,12 +241,12 @@ One captain start a prepicked lobby and arrange teams and report back the result
     async def ReportMatchResult(self, ctx, res, playerId):           
         region = self.RegFromPlayer(playerId)
         if region == None:
-            await ctx.send(f'Must be a captain in order to report match result')
+            await ctx.send(CodeSB(f'Must be a captain in order to report match result'))
             return
 
         game = self.games[region]
         if game == None or game.state != State.IN_GAME:
-            await ctx.send(f'Cannot report result of non-running game')
+            await ctx.send(CodeSB(f'Cannot report result of non-running game'))
             return
 
         self.subs[game.region].clear() 
@@ -341,7 +341,7 @@ One captain start a prepicked lobby and arrange teams and report back the result
 
     async def ValidateReg(self, ctx, region):
         if not Region.Valid(region):
-            await ctx.send('Invalid region, expected: ' + '/'.join(Region.VALID_REGIONS))
+            await ctx.send(CodeSB(f'Invalid region, expected: {"/".join(Region.VALID_REGIONS)}'))
             return False
         return True
 
@@ -359,7 +359,7 @@ One captain start a prepicked lobby and arrange teams and report back the result
                 for newReg in Region.REGIONS)): 
                     if len(self.queues[reg]) == Game.N_PLAYERS and \
                     self.games[reg].state == State.IN_GAME:
-                        await ctx.send(f"{reg}'s queue is full")
+                        await ctx.send(CodeSB(f"{reg}'s queue is full"))
                         return
                     self.queues.add(reg, playerId)
                     regionsAddedTo.append(reg)
@@ -373,7 +373,7 @@ One captain start a prepicked lobby and arrange teams and report back the result
                         return           
         
         if len(regionsAddedTo) == 0:
-            await ctx.send(f'{playerName} already added to {", ".join(regions)}')
+            await ctx.send(CodeSB(f'{playerName} already added to {", ".join(regions)}'))
             return
         
         await self.ShowAddQueueStatus(ctx, playerName, regionsAddedTo)

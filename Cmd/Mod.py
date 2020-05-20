@@ -42,7 +42,7 @@ class Mod(commands.Cog):
         for reg in regions:
             usPlayer = self.model.playerDB.Find(member.id, reg)
             if usPlayer == None:
-                await ctx.send(f'Player {playerName} not registered')
+                await ctx.send(CodeSB(f'Player {playerName} not registered'))
                 return
 
             if not usPlayer.lastPlayed:
@@ -51,7 +51,7 @@ class Mod(commands.Cog):
             for r in races:
                 usPlayer.elo[r] = elo
             self.model.playerDB.UpdateStats(usPlayer)
-        await ctx.send(f"Updated {playerName}'s' elo to {usPlayer.elo[races[0]]} for {', '.join(races)} on {', '.join(regions)}")
+        await ctx.send(CodeSB(f"Updated {playerName}'s' elo to {usPlayer.elo[races[0]]} for {', '.join(races)} on {', '.join(regions)}"))
     
     @commands.command(name='setstats', help="Set player's stats on region for race (Z/T/A)", ignore_extra=False)
     @commands.has_role('MOD')
@@ -76,7 +76,7 @@ class Mod(commands.Cog):
                 usPlayer.ties[r] = ties
             self.model.playerDB.UpdateStats(usPlayer)
 
-        await ctx.send(f"Updated {playerName}'s' wins={usPlayer.wins[races[0]]}, loses={usPlayer.loses[races[0]]}, ties={usPlayer.ties[races[0]]} for {', '.join(races)} on {', '.join(regions)}")
+        await ctx.send(CodeSB(f"Updated {playerName}'s' wins={usPlayer.wins[races[0]]}, loses={usPlayer.loses[races[0]]}, ties={usPlayer.ties[races[0]]} for {', '.join(races)} on {', '.join(regions)}"))
     
     @commands.command(name='queue_bot', help='Queue # of bots on region', ignore_extra=False)
     @commands.has_role('MOD')
