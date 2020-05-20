@@ -27,7 +27,8 @@ class Mod(commands.Cog):
     async def on_force_end(self, ctx, region : Region = Region(Region.ALL)):
         for reg in region.ToList():
             if self.model.games[reg]:
-                await self.model.ReportMatchResult(ctx, MatchRes.TIE, self.model.games[reg].zergCapt.id)
+                await self.model.EndMatch(ctx, self.model.games[reg])
+                await ctx.send(CodeSB(f"Match Concluded on {reg}"))
 
     @commands.command(name='setelo', help="Set player's elo to # on region for race (Z/T/A)", ignore_extra=False)
     @commands.has_role('MOD')

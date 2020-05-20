@@ -2,6 +2,7 @@ from discord.ext import commands
 from Model import Model
 import itertools
 import discord
+import asyncio
 
 from Game import State
 from Player import MatchRes
@@ -30,6 +31,44 @@ class Captain(commands.Cog):
             return None
 
         return self.model.games[region]
+
+    @commands.command(name='cmatch', aliase=['cancelmatch'], help='Cancel match if both captains agree')
+    @commands.cooldown(CMD_RATE, CMD_COOLDOWN)
+    async def on_cancel_match(self, ctx):
+        if not self.model.ChkIsReg(ctx):
+            return
+        
+        invokingId = ctx.message.author.id
+        invokingPlayer = ctx.message.author.name
+           
+        region = self.model.RegFromPlayer(invokingId)
+        if region == None:
+            await ctx.send(CodeSB(f'Must be a captain in order to cancel'))
+            return
+
+        game = self.model.games[region]
+
+        otherCaptId = game.terranCapt.id if game.zergCapt.id == invokingId else game.zergCapt.id
+        otherCaptMent = self.model.IdToMention(otherCaptId)
+
+        REQUEST_TIMEOUT = 60
+
+        await ctx.send(CodeSB(f'{invokingPlayer} attempting to cancel game on {region}.' ) + f'{otherCaptMent} `respond with y/n`')
+
+        def check(msg):
+            response = msg.content.lower()
+            return msg.author.id == otherCaptId and response in ['y', 'n']
+
+        try:
+            msg = await self.model.bot.wait_for("message", check=check, timeout=REQUEST_TIMEOUT)
+        except asyncio.TimeoutError:
+            await ctx.send(CodeSB(f"Cancelation request on {region} timed out"))
+        else:
+            if msg.content == 'y':
+                await self.model.EndMatch(ctx, game)
+                await ctx.send(CodeSB(f"Cancelation on {region} was successfull"))
+            else:
+                await ctx.send(CodeSB(f"Cancelation on {region} was not successfull"))
 
     @commands.command(name='pick', help='Pick member to be on your team', ignore_extra=False)
     @commands.cooldown(CMD_RATE, CMD_COOLDOWN)

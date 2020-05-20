@@ -12,7 +12,7 @@ from Utility import CodeB, CodeSB
 from PQueue import PQueue
 
 class Model(commands.Cog):  
-    TIME_TO_PICK = 0.5  #in seconds
+    TIME_TO_PICK = 90  #in seconds
     #TIME_TO_PICK = 60  #in seconds
     QUEUE_TIMEOUT = 60 # in minutes
     QUEUE_TIMEOUT_EV = 5 # in minnutes
@@ -161,8 +161,6 @@ class Model(commands.Cog):
             self.queues.remove_all_of(Region.ALL, id)
 
     async def StartGame(self, ctx, game):
-        self.RemoveInGameFromQueue(game)
-
         zerg = [(self.IdToUser(id),id) for id in game.zerg.Ids]
         terran = [(self.IdToUser(id),id) for id in game.terran.Ids]
 
@@ -184,6 +182,7 @@ One captain start a prepicked lobby and arrange teams and report back the result
 
     async def StartTeamPick(self, ctx, region):
         game = self.games[region] = Game(region, self.queues.return_players(region, self.playerDB))
+        self.RemoveInGameFromQueue(game)
 
         await self.ShowTeamPickInfo(ctx, game, True)
         await self.StartPickTimer(ctx, game)
@@ -207,11 +206,15 @@ One captain start a prepicked lobby and arrange teams and report back the result
         else:
             await self.ShowTeamPickInfo(ctx, game)
 
-    async def PickTimerHelper(self, ctx, game):
+    async def PickTimerHelper(self, ctx, region):
         while True:
             try:
                 await asyncio.sleep(Model.TIME_TO_PICK)
                 #channel = discord.utils.find(lambda name: name == "General", self.guild.text_channels)
+                if not self.games[region]:
+                    return
+                game = self.games[region]
+
                 playerTurn = self.IdToName(game.playerTurn.id)
                 pickedPlayer = game.PickAfk()
 
@@ -225,7 +228,7 @@ One captain start a prepicked lobby and arrange teams and report back the result
     async def StartPickTimer(self, ctx, game):
         if game.state != State.IN_GAME:
             await self.CancelPickTimer(game)
-            self.autoPickTasks[game.region] = asyncio.create_task(self.PickTimerHelper(ctx, game))
+            self.autoPickTasks[game.region] = asyncio.create_task(self.PickTimerHelper(ctx, game.region))
 
     async def CancelPickTimer(self, game):
         if game.region in self.autoPickTasks:
@@ -246,8 +249,6 @@ One captain start a prepicked lobby and arrange teams and report back the result
         if game == None or game.state != State.IN_GAME:
             await ctx.send(CodeSB(f'Cannot report result of non-running game'))
             return
-
-        self.subs[game.region].clear() 
         
         oldZElo = [(self.IdToName(player.id), int(player.zelo)) for player in game.zerg.players]
         oldTElo = [(self.IdToName(player.id), int(player.telo)) for player in game.terran.players]
@@ -259,23 +260,28 @@ One captain start a prepicked lobby and arrange teams and report back the result
         newTElo = [(self.IdToName(player.id), int(player.telo)) for player in game.terran.players]
 
         embed = discord.Embed(description=f"Victor: {game.GetVictor(playerId, res)}", colour = discord.Colour.blue())
-        #embed.add_field(name="Prior Zerg elo's", value=f"{oldTElo}")
-        #zUpddElos = [(oldElo, newElo) for oldElo, newElo in zip(oldZElo, newZElo)]
+
         nameMax = max(len(name) for name, _ in oldZElo)
         strZUpdElos = '\n'.join([f'{oldElo[0].ljust(nameMax)}: {oldElo[1]} -> {newElo[1]}' for oldElo, newElo in zip(oldZElo, newZElo)])
         strTUpdElos = '\n'.join([f'{oldElo[0].ljust(nameMax)}: {oldElo[1]} -> {newElo[1]}' for oldElo, newElo in zip(oldTElo, newTElo)])
         
         embed.add_field(name="Updated Z elo's: ", value=strZUpdElos)
         embed.add_field(name="Updated T elo's: ", value=strTUpdElos)
-        #embed.add_field(name="Prior elo's", value=f"Zerg: {oldZElo}\n Terran: {oldTElo}")
-        #embed.add_field(name="Updated elo's", value=f"Zerg: {newZElo}\n Terran: {newTElo}")
         await ctx.channel.send(content=CodeSB(f"Match Concluded on {game.region}"), embed=embed)
 
-        await self.DeleteVoice(game)
-        self.games[region] =  None
+        await self.EndMatch(ctx, game)
 
-        if self.queues.is_full(region):  
-            await self.StartTeamPick(ctx, region) 
+    async def EndMatch(self, ctx, game):
+        if game == None:
+            return
+
+        self.subs[game.region].clear() 
+
+        await self.DeleteVoice(game)
+        self.games[game.region] = None
+
+        if self.queues.is_full(game.region):  
+            await self.StartTeamPick(ctx, game.region) 
             await self.ShowQueueStatus(ctx)
 
     async def ShowQueueStatus(self, ctx):
@@ -342,6 +348,9 @@ One captain start a prepicked lobby and arrange teams and report back the result
 
     async def DeleteVoice(self, game):
     #    await self.MoveUsers(itertools.chain(game.zerg.Ids, game.terran.Ids), self.privChannel)
+        if not game.region in self.privVChannelIds: #handle canceled match case where voice was never created
+            return
+
         for channelId in self.privVChannelIds[game.region]:
             channel = self.bot.get_channel(channelId)
             if channel:
