@@ -158,7 +158,7 @@ class Model(commands.Cog):
 
     def RemoveInGameFromQueue(self, game):
         for id in game.AllPlayers:
-            self.queues.remove_all_of(game.region, id)
+            self.queues.remove_all_of(Region.ALL, id)
 
     async def StartGame(self, ctx, game):
         self.RemoveInGameFromQueue(game)
@@ -183,9 +183,7 @@ One captain start a prepicked lobby and arrange teams and report back the result
         await self.CreateVoice(game)
 
     async def StartTeamPick(self, ctx, region):
-        queue = self.queues[region]
-        game = self.games[region] = Game(region, self.queues.to_players(region, self.playerDB))
-        self.queues.clear(region)
+        game = self.games[region] = Game(region, self.queues.return_players(region, self.playerDB))
 
         await self.ShowTeamPickInfo(ctx, game, True)
         await self.StartPickTimer(ctx, game)
@@ -276,6 +274,23 @@ One captain start a prepicked lobby and arrange teams and report back the result
         await self.DeleteVoice(game)
         self.games[region] =  None
 
+        if self.queues.is_full(region):  
+            await self.StartTeamPick(ctx, region) 
+            await self.ShowQueueStatus(ctx)
+
+    async def ShowQueueStatus(self, ctx):
+        embed = discord.Embed(colour = discord.Colour.blue())
+        for region, queue in self.queues:
+            queued = self.IdsToNames(queue.keys())
+            embed.add_field(name=f"{region} [{len(queue)}/{Game.N_PLAYERS}]", value=f"In Queue: {queued}", inline=False)
+            if self.games[region] != None and self.games[region].state == State.IN_GAME:
+                game = self.games[region]
+                zerg = self.IdsToNames(game.zerg.Ids)
+                terran = self.IdsToNames(game.terran.Ids)
+                runningDuration = int(game.RunningDuration().total_seconds() / 60)
+                embed.add_field(name=f"Running for {runningDuration} min", value=f"Zerg: {zerg}\nTerran: {terran}", inline=False)
+        await ctx.channel.send(content=None, embed=embed)
+
     async def PickPlayer(self, ctx, game, choosingPlayer, pickedId, pickedPlayer):
         self.subs[game.region].discard(pickedId)
         game.PickPlayer(pickedId)
@@ -283,16 +298,13 @@ One captain start a prepicked lobby and arrange teams and report back the result
         await self.PickShow(ctx, game)
         await self.StartPickTimer(ctx, game)
 
-    def CreateStubs(self, region, nStubs):
-        if region == Region.ALL:
-            for reg in Region.REGIONS:
-                self.CreateStubs(reg, nStubs)
-        else:
-            stubIds = [i for i in range(1, nStubs + 1)]
-            for id in stubIds:
-                if not self.playerDB.IsRegistered(id, region):
-                    self.playerDB.Register(Player(id, region))
-                self.queues.add(region, id)
+    async def CreateStubs(self, ctx, region, nStubs):
+        for id in (i for i in range(1, nStubs + 1)):
+            for reg in region.ToList():
+                if not self.playerDB.IsRegistered(id, reg):
+                    self.playerDB.Register(Player(id, reg))
+
+            await self.AddPlayerQueue(ctx, str(id), id, region, False)
 
     async def CreateVoice(self, game):
         zergCaptName = self.IdToName(game.zergCapt.id)
@@ -349,7 +361,7 @@ One captain start a prepicked lobby and arrange teams and report back the result
         embed = discord.Embed(description = self.QueueStatus(), colour = discord.Colour.blue())
         await ctx.channel.send(content=CodeSB(f'{playerName} added to: {", ".join(regionsAddedTo)}'), embed=embed)
 
-    async def AddPlayerQueue(self, ctx, playerName, playerId, region : Region):
+    async def AddPlayerQueue(self, ctx, playerName, playerId, region : Region, showStatus=True):
         regions = region.ToList()
 
         regionsAddedTo = []
@@ -357,18 +369,19 @@ One captain start a prepicked lobby and arrange teams and report back the result
             if playerId not in self.queues[reg]:
                 if not any((self.games[newReg] != None and self.games[newReg].IsPlaying(playerId) \
                 for newReg in Region.REGIONS)): 
-                    if len(self.queues[reg]) == Game.N_PLAYERS and \
-                    self.games[reg].state == State.IN_GAME:
-                        await ctx.send(CodeSB(f"{reg}'s queue is full"))
-                        return
                     self.queues.add(reg, playerId)
                     regionsAddedTo.append(reg)
 
-                    if len(self.queues[reg]) == Game.N_PLAYERS:
+                    if self.queues.is_full(reg):
+                        if self.games[reg]:
+                        #      await ctx.send(CodeSB(f'Game on {reg} already running... waiting until it ends'))
+                              return
+
                         for remReg in [r for r in regions if r != reg]:
                             if playerId in self.queues[remReg]:
                                 self.queues.remove(remReg, playerId)
-                        await self.ShowAddQueueStatus(ctx, playerName, [reg])
+                        if showStatus:
+                            await self.ShowAddQueueStatus(ctx, playerName, [reg])
                         await self.StartTeamPick(ctx, reg) 
                         return           
         
@@ -376,7 +389,8 @@ One captain start a prepicked lobby and arrange teams and report back the result
             await ctx.send(CodeSB(f'{playerName} already added to {", ".join(regions)}'))
             return
         
-        await self.ShowAddQueueStatus(ctx, playerName, regionsAddedTo)
+        if showStatus:
+            await self.ShowAddQueueStatus(ctx, playerName, regionsAddedTo)
     
     async def RemPlayerQueue(self, ctx, playerName, playerId, region : Region):
         if self.queues.remove_all_of(region.region, playerId):

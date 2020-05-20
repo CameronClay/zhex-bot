@@ -100,17 +100,7 @@ class General(commands.Cog):
         if not self.model.ChkIsReg(ctx):
             return
 
-        embed = discord.Embed(colour = discord.Colour.blue())
-        for region, queue in self.model.queues:
-            queued = self.model.IdsToNames(queue.keys())
-            embed.add_field(name=f"{region} [{len(queue)}/{Game.N_PLAYERS}]", value=f"In Queue: {queued}", inline=False)
-            if self.model.games[region] != None and self.model.games[region].state == State.IN_GAME:
-                game = self.model.games[region]
-                zerg = self.model.IdsToNames(game.zerg.Ids)
-                terran = self.model.IdsToNames(game.terran.Ids)
-                runningDuration = int(game.RunningDuration().total_seconds() / 60)
-                embed.add_field(name=f"Running for {runningDuration} min", value=f"Zerg: {zerg}\nTerran: {terran}", inline=False)
-        await ctx.channel.send(content=None, embed=embed)
+        await self.model.ShowQueueStatus(ctx)
 
     @commands.command(name='racepref', help='Set race preference for region (Z - Zerg, T - Terran, A - All)')
     @commands.cooldown(CMD_RATE, CMD_COOLDOWN)

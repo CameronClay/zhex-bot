@@ -25,11 +25,9 @@ class Mod(commands.Cog):
     @commands.has_role('MOD')
     @commands.cooldown(CMD_RATE, CMD_COOLDOWN)
     async def on_force_end(self, ctx, region : Region = Region(Region.ALL)):
-        if region.region == Region.ALL:
-            for reg in Region.REGIONS:
-                self.on_force_end(ctx, reg)
-        elif self.model.games[region.region]:
-            await self.model.ReportMatchResult(ctx, MatchRes.TIE, self.model.games[region.region].zergCapt.id)
+        for reg in region.ToList():
+            if self.model.games[reg]:
+                await self.model.ReportMatchResult(ctx, MatchRes.TIE, self.model.games[reg].zergCapt.id)
 
     @commands.command(name='setelo', help="Set player's elo to # on region for race (Z/T/A)", ignore_extra=False)
     @commands.has_role('MOD')
@@ -82,7 +80,7 @@ class Mod(commands.Cog):
     @commands.has_role('MOD')
     @commands.cooldown(CMD_RATE, CMD_COOLDOWN)
     async def on_queue_bot(self, ctx, region : Region, count : int):
-        self.model.CreateStubs(region.region, count)
+        await self.model.CreateStubs(ctx, region, count)
         embed = discord.Embed(colour = discord.Colour.blue(), description = self.model.QueueStatus())
         await ctx.channel.send(content=CodeSB(f'Queued {count} bots on {region.region}'), embed=embed)
 
