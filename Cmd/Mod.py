@@ -50,7 +50,7 @@ class Mod(commands.Cog):
             for r in races:
                 usPlayer.elo[r] = elo
             self.model.playerDB.UpdateStats(usPlayer)
-        await ctx.send(CodeSB(f"Updated {playerName}'s' elo to {usPlayer.elo[races[0]]} for {', '.join(races)} on {', '.join(regions)}"))
+        await ctx.send(CodeSB(f"Updated {playerName}'s elo to {usPlayer.elo[races[0]]} for {', '.join(races)} on {', '.join(regions)}"))
     
     @commands.command(name='setstats', help="Set player's stats on region for race (Z/T/A)", ignore_extra=False)
     @commands.has_role('MOD')
