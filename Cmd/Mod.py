@@ -75,7 +75,7 @@ class Mod(commands.Cog):
                 usPlayer.ties[r] = ties
             self.model.playerDB.UpdateStats(usPlayer)
 
-        await ctx.send(CodeSB(f"Updated {playerName}'s' wins={usPlayer.wins[races[0]]}, loses={usPlayer.loses[races[0]]}, ties={usPlayer.ties[races[0]]} for {', '.join(races)} on {', '.join(regions)}"))
+        await ctx.send(CodeSB(f"Updated {playerName}'s wins={usPlayer.wins[races[0]]}, loses={usPlayer.loses[races[0]]}, ties={usPlayer.ties[races[0]]} for {', '.join(races)} on {', '.join(regions)}"))
     
     @commands.command(name='queue_bot', help='Queue # of bots on region', ignore_extra=False)
     @commands.has_role('MOD')
@@ -94,6 +94,7 @@ class Mod(commands.Cog):
         await ctx.channel.send(content=CodeSB(f'Queues cleared on: {", ".join(region.ToList())}'), embed=embed)
 
     @commands.command(name='addp', help=f'Add player to queue on region (NA/EU/ALL = default); Timeout={Model.QUEUE_TIMEOUT} mins', ignore_extra=False)
+    @commands.has_role('MOD')
     @commands.cooldown(CMD_RATE, CMD_COOLDOWN)
     async def on_addp(self, ctx, member : discord.Member, region : Region = Region(Region.ALL)):
         if not self.model.ChkIsRegId(member.id):
@@ -103,6 +104,7 @@ class Mod(commands.Cog):
         await self.model.AddPlayerQueue(ctx, member.name, member.id, region)
 
     @commands.command(name='delp', aliases = ['remp'], help='Remove player from queue on region (NA/EU/ALL = default)', ignore_extra=False)
+    @commands.has_role('MOD')
     @commands.cooldown(CMD_RATE, CMD_COOLDOWN)
     async def on_removep(self, ctx, member : discord.Member, region : Region = Region(Region.ALL)):
         if not self.model.ChkIsReg(ctx):
@@ -111,6 +113,7 @@ class Mod(commands.Cog):
         await self.model.RemPlayerQueue(ctx, member.name, member.id, region)
 
     @commands.command(name='addsubp', help='Allow player to be a potential sub on region (captains must already be picking)')
+    @commands.has_role('MOD')
     @commands.cooldown(CMD_RATE, CMD_COOLDOWN)
     async def on_subp(self, ctx, member : discord.Member, region : Region = Region(Region.ALL)):
         if not self.model.ChkIsReg(ctx):
@@ -119,6 +122,7 @@ class Mod(commands.Cog):
         await self.model.AddPlayerSub(ctx, member.name, member.id, region)
 
     @commands.command(name='delsubp', aliases = ['remsubp'], help='Remove player as potential sub on region')
+    @commands.has_role('MOD')
     @commands.cooldown(CMD_RATE, CMD_COOLDOWN)
     async def on_del_subp(self, ctx, member : discord.Member, region : Region = Region(Region.ALL)):
         if not self.model.ChkIsReg(ctx):
