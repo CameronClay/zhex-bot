@@ -1,30 +1,11 @@
-import psycopg2
+import sqlite3
 from Player import Player
 from Region import Region
 
-from configparser import ConfigParser
-
 class PlayerDB:
-    @staticmethod
-    def config(filename='database.ini', section='postgresql'):
-        # create a parser
-        parser = ConfigParser()
-        # read config file
-        parser.read(filename)
-
-        # get section, default to postgresql
-        if parser.has_section(section):
-            return {param[0]:param[1] for param in parser.items(section)}
-        else:
-            raise Exception('Section {0} not found in the {1} file'.format(section, filename))
-
+    DATABASE_NAME = 'players.db'
     def __init__(self):
-        params = PlayerDB.config()
-
-        # connect to the PostgreSQL server
-        print('Connecting to the PostgreSQL database...')
-
-        self.conn = psycopg2.connect(**params)
+        self.conn = sqlite3.connect(PlayerDB.DATABASE_NAME)
         cur = self.conn.cursor()
         cur.execute('''create table if not exists players (
                     id         integer,
@@ -47,13 +28,12 @@ class PlayerDB:
         if region == Region.ALL:
             return all(self.IsRegistered(playerId, region) for region in Region.REGIONS)
         else:
-            res = self.conn.execute(f'''select * from players where id = %s and region = %s''', (playerId, region))
+            res = self.conn.execute(f'''select * from players where id = ? and region = ?''', (playerId, region))
             res = res.fetchone()
             return res != None
-            
     # region must not be all
     def Find(self, playerId, region : Region):
-        res = self.conn.execute(f'''select * from players where id = %s and region = %s''', (playerId, region))
+        res = self.conn.execute(f'''select * from players where id = ? and region = ?''', (playerId, region))
         res = res.fetchone()
         if res:
             return Player(*res)
@@ -61,32 +41,32 @@ class PlayerDB:
 
     def Register(self, player):
         self.conn.execute('''insert or ignore into players (id, region, zwins, zloses, zties, zelo, twins, tloses, tties, telo, lastPlayed, racePref)
-                    values (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)''', (player.id, player.region, player.zwins, player.zloses, player.zties, player.zelo,
+                    values (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)''', (player.id, player.region, player.zwins, player.zloses, player.zties, player.zelo,
                     player.twins, player.tloses, player.tties, player.telo, 
                     player.lastPlayed, player.racePref.race))
         self.conn.commit()
 
     def UnRegister(self, playerId, region : Region):
         if region == Region.ALL:
-            self.conn.execute(f'''delete from players where id = %s''', (playerId, ))
+            self.conn.execute(f'''delete from players where id = ?''', (playerId, ))
         else:
-            self.conn.execute(f'''delete from players where id = %s and region = %s''', (playerId, region))
+            self.conn.execute(f'''delete from players where id = ? and region = ?''', (playerId, region))
         self.conn.commit()
 
-    def UpdatePlayer(self, player):
+    def UpdateStats(self, player):
         sql = f'''update players
             set
-                zwins = %s, 
-                zloses = %s, 
-                zties = %s,
-                zelo = %s, 
-                twins = %s, 
-                tloses = %s, 
-                tties = %s,
-                telo = %s, 
-                lastPlayed = %s,
-                racePref = %s
-            where id = %s and region = %s'''
+                zwins = ?, 
+                zloses = ?, 
+                zties = ?,
+                zelo = ?, 
+                twins = ?, 
+                tloses = ?, 
+                tties = ?,
+                telo = ?, 
+                lastPlayed = ?,
+                racePref = ?
+            where id = ? and region = ?'''
 
         self.conn.execute(sql, (player.zwins, player.zloses, player.zties, player.zelo, player.twins, player.tloses, player.tties, player.telo,
             player.lastPlayed, player.racePref.race, player.id, player.region))

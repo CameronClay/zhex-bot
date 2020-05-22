@@ -254,7 +254,7 @@ One captain start a prepicked lobby and arrange teams and report back the result
         oldTElo = [(self.IdToName(player.id), int(player.telo)) for player in game.terran.players]
         game.MatchResult(playerId, res)
         for player in itertools.chain(game.zerg.players, game.terran.players):
-            self.playerDB.UpdateStats(player)
+            self.playerDB.UpdatePlayer(player)
 
         newZElo = [(self.IdToName(player.id), int(player.zelo)) for player in game.zerg.players]
         newTElo = [(self.IdToName(player.id), int(player.telo)) for player in game.terran.players]

@@ -11,7 +11,7 @@ from Utility import CodeB, CodeSB
 class Mod(commands.Cog):     
     CMD_RATE = 5
     CMD_COOLDOWN = 20
-    def __init__(self, model):
+    def __init__(self, model : Model):
         self.model = model
         
     @commands.command(name='unreg', help='Unregister user with the server and delete stats', ignore_extra=False)
@@ -49,7 +49,7 @@ class Mod(commands.Cog):
 
             for r in races:
                 usPlayer.elo[r] = elo
-            self.model.playerDB.UpdateStats(usPlayer)
+            self.model.playerDB.UpdatePlayer(usPlayer)
         await ctx.send(CodeSB(f"Updated {playerName}'s elo to {usPlayer.elo[races[0]]} for {', '.join(races)} on {', '.join(regions)}"))
     
     @commands.command(name='setstats', help="Set player's stats on region for race (Z/T/A)", ignore_extra=False)
@@ -73,7 +73,7 @@ class Mod(commands.Cog):
                 usPlayer.wins[r] = wins
                 usPlayer.loses[r] = loses
                 usPlayer.ties[r] = ties
-            self.model.playerDB.UpdateStats(usPlayer)
+            self.model.playerDB.UpdatePlayer(usPlayer)
 
         await ctx.send(CodeSB(f"Updated {playerName}'s wins={usPlayer.wins[races[0]]}, loses={usPlayer.loses[races[0]]}, ties={usPlayer.ties[races[0]]} for {', '.join(races)} on {', '.join(regions)}"))
     
