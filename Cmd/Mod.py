@@ -7,6 +7,7 @@ from Game import State
 from Player import Player, MatchRes, Race
 from Region import Region
 from Utility import CodeB, CodeSB
+from PlayerDB import PlayerDB
 
 class Mod(commands.Cog):     
     CMD_RATE = 5
@@ -49,7 +50,7 @@ class Mod(commands.Cog):
 
             for r in races:
                 usPlayer.elo[r] = elo
-            self.model.playerDB.UpdatePlayer(usPlayer)
+            self.model.playerDB.UpdateStats(usPlayer)
         await ctx.send(CodeSB(f"Updated {playerName}'s elo to {usPlayer.elo[races[0]]} for {', '.join(races)} on {', '.join(regions)}"))
     
     @commands.command(name='setstats', help="Set player's stats on region for race (Z/T/A)", ignore_extra=False)
@@ -73,7 +74,7 @@ class Mod(commands.Cog):
                 usPlayer.wins[r] = wins
                 usPlayer.loses[r] = loses
                 usPlayer.ties[r] = ties
-            self.model.playerDB.UpdatePlayer(usPlayer)
+            self.model.playerDB.UpdateStats(usPlayer)
 
         await ctx.send(CodeSB(f"Updated {playerName}'s wins={usPlayer.wins[races[0]]}, loses={usPlayer.loses[races[0]]}, ties={usPlayer.ties[races[0]]} for {', '.join(races)} on {', '.join(regions)}"))
     
@@ -129,3 +130,10 @@ class Mod(commands.Cog):
             return
 
         await self.model.RemPlayerSub(ctx, member.name, member.id, region)
+
+    @commands.command(name='cleardb', help='Delete database (warning only use this if you want to clear ALL players stats)')
+    @commands.has_role('MOD')
+    @commands.cooldown(CMD_RATE, CMD_COOLDOWN)
+    async def on_clear_db(self, ctx):
+        self.model.playerDB.Recreate()
+        await ctx.send('Successfully cleared the DB')

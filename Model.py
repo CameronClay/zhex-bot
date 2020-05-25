@@ -12,7 +12,7 @@ from Utility import CodeB, CodeSB
 from PQueue import PQueue
 
 class Model(commands.Cog):  
-    TIME_TO_PICK = 90  #in seconds
+    TIME_TO_PICK = 0.2  #in seconds
     #TIME_TO_PICK = 60  #in seconds
     QUEUE_TIMEOUT = 60 # in minutes
     QUEUE_TIMEOUT_EV = 5 # in minnutes
