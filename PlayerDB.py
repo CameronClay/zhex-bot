@@ -22,6 +22,9 @@ class PlayerDB:
         #user:password@host:port/dbname
         pRe = re.compile('postgres://(.*):(.*)@(.*):(.*)/(.*)')
         m = pRe.match(url)
+        if m == None:
+            raise Exception(f'Failed to parse postgres URL')
+
         return {'user':m.group(0), 'password':m.group(1), 'host':m.group(2), 'port':m.group(3), 'dbname':m.group(4)}
 
 
@@ -31,6 +34,7 @@ class PlayerDB:
     def __Initialize(self):
         DATABASE_URL = os.environ['DATABASE_URL']
         params = PlayerDB.ParseURL(DATABASE_URL)
+        raise Exception(f'{DATABASE_URL} {params}')
         #params = PlayerDB.Config()
 
         print('Connecting to the PostgreSQL database...')
