@@ -3,10 +3,12 @@ from Player import Player
 from Region import Region
 
 from configparser import ConfigParser
+import re
+import os
 
 class PlayerDB:
     @staticmethod
-    def config(filename='database.ini', section='postgresql'):
+    def Config(filename='database.ini', section='postgresql'):
         parser = ConfigParser()
         parser.read(filename)
 
@@ -15,11 +17,21 @@ class PlayerDB:
         else:
             raise Exception(f'Section {section} not found in the {filename} file')
 
+    @staticmethod
+    def ParseURL(url : str):
+        #user:password@host:port/dbname
+        re = re.compile('postgres://(.*):(.*)@(.*):(.*)/(.*)')
+        m = re.match(url)
+        return {'user':m.group(0), 'password':m.group(1), 'host':m.group(2), 'port':m.group(3), 'dbname':m.group(4)}
+
+
     def __init__(self):
         self.__Initialize()
 
     def __Initialize(self):
-        params = PlayerDB.config()
+        DATBASE_URL = os.environ['DATABASE_URL']
+        params = PlayerDB.ParseURL(DATABASE_URL)
+        #params = PlayerDB.Config()
 
         print('Connecting to the PostgreSQL database...')
 
