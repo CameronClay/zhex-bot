@@ -29,7 +29,7 @@ class PlayerDB:
         self.__Initialize()
 
     def __Initialize(self):
-        DATBASE_URL = os.environ['DATABASE_URL']
+        DATABASE_URL = os.environ['DATABASE_URL']
         params = PlayerDB.ParseURL(DATABASE_URL)
         #params = PlayerDB.Config()
 
