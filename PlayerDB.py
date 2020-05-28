@@ -20,8 +20,8 @@ class PlayerDB:
     @staticmethod
     def ParseURL(url : str):
         #user:password@host:port/dbname
-        re = re.compile('postgres://(.*):(.*)@(.*):(.*)/(.*)')
-        m = re.match(url)
+        pRe = re.compile('postgres://(.*):(.*)@(.*):(.*)/(.*)')
+        m = pRe.match(url)
         return {'user':m.group(0), 'password':m.group(1), 'host':m.group(2), 'port':m.group(3), 'dbname':m.group(4)}
 
 
