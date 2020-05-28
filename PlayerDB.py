@@ -35,7 +35,6 @@ class PlayerDB:
     def __Initialize(self):
         DATABASE_URL = os.environ['DATABASE_URL']
         params = PlayerDB.ParseURL(DATABASE_URL)
-        raise Exception(f'{DATABASE_URL} {params}')
         #params = PlayerDB.Config()
 
         print('Connecting to the PostgreSQL database...')
