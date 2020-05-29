@@ -54,10 +54,6 @@ class Model(commands.Cog):
     def run(self):
         self.bot.run(self.TOKEN)
 
-    #async def reset(self):
-    #    self.bot.clear()
-    #    await self.bot.wait_until_ready()
-
     @tasks.loop(minutes=QUEUE_TIMEOUT_EV)
     async def pick_timeout(self):
         remQueues = dict()
@@ -147,7 +143,6 @@ class Model(commands.Cog):
             return str(id)
 
         return res.name
-        #return bot.get_user(id).name
 
     @staticmethod
     def UserToName(member, id):
@@ -210,7 +205,6 @@ One captain start a prepicked lobby and arrange teams and report back the result
         while True:
             try:
                 await asyncio.sleep(Model.TIME_TO_PICK)
-                #channel = discord.utils.find(lambda name: name == "General", self.guild.text_channels)
                 if not self.games[region]:
                     return
                 game = self.games[region]
@@ -433,79 +427,3 @@ One captain start a prepicked lobby and arrange teams and report back the result
             self.subs[reg].discard(playerId)
         
         await ctx.send(CodeSB(f'{playerName} no longer avaiable to sub on {", ".join(regions)}'))
-
-    #async def MoveUsers(self, ids, channel):
-    #    for id in ids:
-    #        user = self.IdToUser(id)
-    #        if user:
-    #            user.voice = discord.VoiceState(True, channel = channel)
-
-#async def MoveToVoice(ctx, game):
-#    zChannel = f"{game.region} Zerg"
-#    tChannel = f"{game.region} Terran"
-#    for channel in [zChannel, tChannel]:
-#        found = guild.fin
-#    await guild.create_voice_channel(zChannel)
-#    for id in game.zerg.Ids:
-#        user = IdToUser(id)
-#        if user:
-#            user.move_to(zChannel)
-#
-
-    #def MoveToNewVoice(self, game):
-    #    zergCaptName = self.IdToName(game.zergCapt.id)
-    #    terranCaptName = self.IdToName(game.terranCapt.id)
-    #    zChannel = f"Team {zergCaptName}"
-    #    tChannel = f"Team {terranCaptName}"
-    #    await guild.create_voice_channel(zChannel)
-    #    await guild.create_voice_channel(zChannel)
-#
-    #    for ids in game.zerg.Ids:
-
-
-    #async def PickTimeoutHelper(self, ctx, game):
-    #    await self.bot.send(f'{self.IdToName(game.playerTurn.id)} took too long...')
-    #    pickedPlayer = game.PickAfk()
-    #    await self.bot.send(f'{self.IdToName(pickedPlayer.id)} added to {game.PlayerRace(pickedPlayer.id)}')
-    #    await self.StartPickTimer(ctx, game)
-
-    #@tasks.loop(seconds=10)
-    #async def PickTimeoutEU(self):
-    #    game = self.games[Region.EU]
-    #    await self.PickTimerHelper(game)
-#
-    #def EnablePickTimer(self, region):       
-    #    if region == Region.NA:
-    #        self.PickTimeoutNA.start()
-    #    elif region == Region.EU:
-    #        self.PickTimeoutEU.restart()
-
-    #def CancelPickTimer(self, region):
-    #    if region == Region.NA:
-    #        self.PickTimeoutNA.cancel()
-    #    elif region == Region.EU:
-    #        self.PickTimeoutEU.cancel()
-
-    #def StartPickTimer(self)
-                    
-    #def ResetPickTimer(self, ctx, game):
-        #self.pickTimedOut = False
-        #if self.pickTimer.is_alive():
-         #   self.pickTimer.cancel()
-
-        #self.pickTimer = threading.Timer(Model.TIME_TO_PICK, Model.PickTimeout, [self])
-
-    #need to set condition variable in other thread
-    #async def StartPickTimer(self, ctx, game):
-    #    self.ResetPickTimer(ctx, game)
-#
-    #    if game.state != State.IN_GAME:
-    #        self.pickTimer.start()
-    #        #with self.cvTimer:
-    #        #    self.cvTimer.wait()
-    #        #    if self.pickTimedOut:
-    #        #await self.PickTimeoutHelper(ctx, game)
-    #    else:
-    #        await self.PickShow(ctx, game)
-#
-    #        #await MoveToVoice(ctx, game)

@@ -26,8 +26,6 @@ class PlayerDB:
             raise Exception(f'Failed to parse postgres URL')
 
         return m.groupdict()
-        #return {'user':m.group(1), 'password':m.group(2), 'host':m.group(3), 'port':m.group(4), 'dbname':m.group(5)}
-
 
     def __init__(self):
         self.__Initialize()
