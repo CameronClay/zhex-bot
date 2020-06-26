@@ -32,7 +32,7 @@ class Captain(commands.Cog):
 
         return self.model.games[region]
 
-    @commands.command(name='cmatch', aliase=['cancelmatch'], help='Cancel match if both captains agree')
+    @commands.command(name='cmatch', aliases=['cancelmatch'], help='Cancel match if both captains agree')
     @commands.cooldown(CMD_RATE, CMD_COOLDOWN)
     async def on_cancel_match(self, ctx):
         if not self.model.ChkIsReg(ctx):
