@@ -131,3 +131,5 @@ Max.txt
 Min.txt
 /players
 /players.db
+
+/.env
