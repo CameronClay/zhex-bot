@@ -5,7 +5,7 @@ This is a discord bot for the arcade game Zerg Hex within SC2. It ranks players 
 The bot is built on discord.py and uses Progres sql as the database.
 
 # Deploying bot bot
-Bot is currently setup to be deployed on heroku. Commit the repository to heroku and turn the bot on.
+Bot is currently setup to be deployed on heroku. Create a .env file with DISCORD_TOKEN and DISCORD_GUILD set. Commit the repository to heroku and turn the bot on.
 
 # Getting started with bot
 # Captain:
