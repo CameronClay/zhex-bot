@@ -1,6 +1,5 @@
-# zerg-hex-bot
-This is a discord bot for the arcade game Zerg Hex within SC2. It ranks players based on elo and stores rankings in a database. Players can queue for a game, set team preference, view players' stats and more.
-The bot is built on discord.py and uses Progres sql as the database.
+# zhex-bot
+Discord bot for the arcade game within SC2. It ranks players based on Elo and stores rankings in a database. Players can queue for a game, set team preference, view players' stats and more. The bot is built on Discord.py and uses PostgreSQL as the database.
 
 ## Getting started
 ```
