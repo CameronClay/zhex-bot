@@ -7,7 +7,7 @@ The bot is built on discord.py and uses Progres sql as the database.
 # Deployment
 Bot was setup to be deployed on heroku. Commit the repository to heroku and turn the bot on.
 
-# Getting started with bot
+# Getting started
 ```
 Captain:
   pick        Pick member to be on your team  
