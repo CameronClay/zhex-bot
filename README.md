@@ -28,7 +28,7 @@ Type !help command for more info on commands.
 Bot was setup to be deployed on heroku. Commit the repository to heroku and turn the bot on.
 
 ### Unit Testing
-- Unit testing done with pytest.
+- Some unit testing done with pytest.
 
 ### Tooling
 - Python
